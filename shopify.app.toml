@@ -1,13 +1,13 @@
 name = "Kablet"
 client_id = "67a720f66e77c1e3f597ddef97dbde0e"
-application_url = "https://ramble-unblock-occupy.ngrok-free.dev"
+application_url = "https://kablet-backend.onrender.com"
 embedded = false
 
 [access_scopes]
 scopes = "read_orders,write_orders,read_draft_orders,write_draft_orders"
 
 [auth]
-redirect_urls = ["https://ramble-unblock-occupy.ngrok-free.dev/auth/callback"]
+redirect_urls = ["https://kablet-backend.onrender.com/auth/callback"]
 
 [webhooks]
 api_version = "2026-07"

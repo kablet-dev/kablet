@@ -9,7 +9,7 @@ import {
 } from '@shopify/post-purchase-ui-extensions-react'
 import { useState, useEffect } from 'react'
 
-const API_BASE = 'https://ramble-unblock-occupy.ngrok-free.dev'
+const API_BASE = 'https://kablet-backend.onrender.com'
 
 // Phase 1: Tell Shopify to always show the post-purchase page
 extend('Checkout::PostPurchase::ShouldRender', async ({ storage }) => {
@@ -39,7 +39,7 @@ function App() {
       attempts++
       fetch(
         `${API_BASE}/opportunity/decision?shopifyOrderId=${orderId}&shopDomain=${shopDomain}`,
-        { headers: { 'ngrok-skip-browser-warning': 'true' } }
+        {}
       )
         .then(r => r.json())
         .then(data => {
@@ -74,7 +74,7 @@ function App() {
         <Button onPress={async () => {
           await fetch(`${API_BASE}/opportunity/response`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ instanceId: opportunity.instanceId, response: 'ACCEPTED', shopDomain }),
           })
           setResponded(true)
@@ -84,7 +84,7 @@ function App() {
         <Button plain onPress={async () => {
           await fetch(`${API_BASE}/opportunity/response`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+       headers: { 'Content-Type': 'application/json' },    
             body: JSON.stringify({ instanceId: opportunity.instanceId, response: 'DECLINED', shopDomain }),
           })
           setResponded(true)
