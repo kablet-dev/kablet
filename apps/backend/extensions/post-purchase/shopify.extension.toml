@@ -1,0 +1,7 @@
+api_version = "2024-01"
+
+[[extensions]]
+type = "ui_extension"
+name = "Kablet Offer"
+handle = "kablet-offer"
+targeting = [{target = "purchase.thank-you.block.render"}]

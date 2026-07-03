@@ -1,0 +1,14 @@
+{
+  "name": "kablet-post-purchase",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@shopify/post-purchase-ui-extensions-react": "^0.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

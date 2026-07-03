@@ -1,0 +1,21 @@
+{
+  "name": "@kablet/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+  "dev": "node --env-file=.env --import tsx/esm --watch src/main.ts",
+  "build": "tsc",
+  "start": "node dist/main.js"
+},
+  "dependencies": {
+    "fastify": "^4.25.0",
+    "@fastify/cors": "^9.0.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "tsx": "^4.7.0",
+    "@types/node": "^20.11.0"
+  }
+}

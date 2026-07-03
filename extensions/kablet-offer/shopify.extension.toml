@@ -1,0 +1,11 @@
+name = "kablet-offer"
+type = "checkout_post_purchase"
+uid = "871e343a-2fa8-5f98-72dc-4ef4f9f970f6a5451443"
+
+# [[metafields]]
+# namespace = "my-namespace"
+# key = "my-key"
+
+# [[metafields]]
+# namespace = "my-namespace"
+# key = "my-key-2"
