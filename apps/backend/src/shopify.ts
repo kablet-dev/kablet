@@ -41,6 +41,14 @@ export function translateShopifyOrder(
     has_shipping_address: !!order.shipping_address,
     cod_supported: true,
     source_platform: 'SHOPIFY',
+    cart_line_items: order.line_items?.map(item => ({
+      product_id: item.product_id?.toString(),
+      variant_id: item.variant_id?.toString(),
+      title: item.title,
+      quantity: item.quantity,
+      price: parseFloat(item.price),
+      sku: item.sku,
+    })) ?? [],
   }
 }
 
@@ -142,6 +150,16 @@ export interface ShopifyOrder {
     id: number
     orders_count: number
   }
+  line_items?: ShopifyLineItem[]
+}
+
+export interface ShopifyLineItem {
+  product_id?: number
+  variant_id?: number
+  title: string
+  quantity: number
+  price: string
+  sku?: string
 }
 
 export interface ShopifyAddress {

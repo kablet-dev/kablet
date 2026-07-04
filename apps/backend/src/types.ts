@@ -32,6 +32,16 @@ export interface TransactionEvent {
   cod_supported: boolean
   source_platform: string
   received_at: string
+  cart_line_items: CartLineItem[]
+}
+
+export interface CartLineItem {
+  product_id?: string
+  variant_id?: string
+  title: string
+  quantity: number
+  price: number
+  sku?: string
 }
 
 export interface OpportunityDefinition {
@@ -80,6 +90,10 @@ export interface OpportunityInstance {
   execution_completed_at: string | null
   execution_failed_reason: string | null
   outcome_value: number | null
+  customer_name: string | null
+  customer_email: string | null
+  customer_phone: string | null
+  shipping_address: object | null
   created_at: string
 }
 

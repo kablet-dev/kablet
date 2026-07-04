@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
+import { fetchShopifyOrder } from '../shopify.js'
 
 export async function opportunityRoutes(fastify: FastifyInstance) {
 
@@ -56,8 +57,8 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       .single()
 
     if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
-  return reply.send({ opportunity: null })
-}
+      return reply.send({ opportunity: null })
+    }
 
     const { data: definition } = await db
       .from('opportunity_definitions')
@@ -67,10 +68,13 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
 
     if (!definition) return reply.send({ opportunity: null })
 
-    await db
-      .from('opportunity_instances')
-      .update({ current_state: 'PRESENTED' })
-      .eq('id', instance.id)
+    // Update instance to PRESENTED
+    if (instance.current_state === 'SELECTED') {
+      await db
+        .from('opportunity_instances')
+        .update({ current_state: 'PRESENTED' })
+        .eq('id', instance.id)
+    }
 
     fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
 
@@ -104,7 +108,7 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
 
     const { data: merchant } = await db
       .from('merchants')
-      .select('id')
+      .select('id, shopify_shop_domain, shopify_access_token')
       .eq('shopify_shop_domain', shopDomain)
       .single()
 
@@ -112,7 +116,7 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
 
     const { data: instance } = await db
       .from('opportunity_instances')
-      .select('id, merchant_id, current_state, definition_id')
+      .select('id, merchant_id, current_state, definition_id, transaction_event_id, customer_reference')
       .eq('id', instanceId)
       .single()
 
@@ -140,13 +144,46 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       return reply.send({ ok: true })
     }
 
-    // ACCEPTED — get the product price for outcome value
+    // ACCEPTED — fetch customer details from original Shopify order
+    const { data: event } = await db
+      .from('transaction_events')
+      .select('shopify_order_id')
+      .eq('id', instance.transaction_event_id)
+      .single()
+
     const { data: definition } = await db
       .from('opportunity_definitions')
       .select('shopify_product_price')
       .eq('id', instance.definition_id)
       .single()
 
+    // Fetch original order to get customer fulfillment details
+    let customerName: string | null = null
+    let customerEmail: string | null = null
+    let customerPhone: string | null = null
+    let shippingAddress: object | null = null
+
+    if (event?.shopify_order_id) {
+      try {
+        const originalOrder = await fetchShopifyOrder(
+          merchant.shopify_shop_domain,
+          merchant.shopify_access_token,
+          event.shopify_order_id
+        )
+
+        const firstName = originalOrder.shipping_address?.first_name ?? ''
+        const lastName = originalOrder.shipping_address?.last_name ?? ''
+        customerName = `${firstName} ${lastName}`.trim() || null
+        customerEmail = originalOrder.email ?? null
+        customerPhone = originalOrder.shipping_address?.phone ?? null
+        shippingAddress = originalOrder.shipping_address ?? null
+
+      } catch (err) {
+        fastify.log.error({ err }, 'Failed to fetch original order for fulfillment details')
+      }
+    }
+
+    // Update instance to COMPLETED with fulfillment details
     await db
       .from('opportunity_instances')
       .update({
@@ -155,6 +192,10 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
         response_at: responseAt,
         execution_completed_at: responseAt,
         outcome_value: definition?.shopify_product_price ?? null,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        shipping_address: shippingAddress,
       })
       .eq('id', instanceId)
 
