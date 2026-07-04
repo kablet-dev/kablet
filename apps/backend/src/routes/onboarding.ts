@@ -23,8 +23,8 @@ export async function onboardingRoutes(fastify: FastifyInstance) {
     }
 
     const checkoutEditorUrl = shop
-      ? `https://${shop}/admin/themes/current/editor?context=checkout&template=thank-you`
-      : '#'
+  ? `https://${shop}/admin/themes/current/editor?context=thankyou`
+  : '#'
 
     const html = `
 <!DOCTYPE html>
