@@ -66,11 +66,8 @@ server.get('/auth/callback', async (request, reply) => {
   const data = await response.json() as any
   server.log.info({ shop, accessToken: data.access_token }, 'OAuth completed')
 
-  return reply.send({
-    shop,
-    access_token: data.access_token,
-    message: 'Save this access token!'
-  })
+  // Redirect to onboarding page instead of returning JSON
+  return reply.redirect(`/?shop=${shop}`)
 })
 
 await server.register(webhookRoutes)
