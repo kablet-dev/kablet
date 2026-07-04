@@ -84,4 +84,14 @@ const start = async () => {
   }
 }
 
+// Keep Render free tier alive — ping every 14 minutes
+const BACKEND_URL = process.env.RENDER_EXTERNAL_URL ?? `http://localhost:${PORT}`
+setInterval(async () => {
+  try {
+    await fetch(`${BACKEND_URL}/health`)
+  } catch {
+    // Ignore errors
+  }
+}, 14 * 60 * 1000)
+
 start()
