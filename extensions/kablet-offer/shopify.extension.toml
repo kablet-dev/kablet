@@ -1,11 +1,15 @@
-name = "kablet-offer"
-type = "checkout_post_purchase"
+api_version = "2025-07"
+
+[[extensions]]
+name = "Kablet Offer"
+handle = "kablet-offer"
+
 uid = "871e343a-2fa8-5f98-72dc-4ef4f9f970f6a5451443"
+type = "ui_extension"
 
-# [[metafields]]
-# namespace = "my-namespace"
-# key = "my-key"
+[extensions.capabilities]
+network_access = true
 
-# [[metafields]]
-# namespace = "my-namespace"
-# key = "my-key-2"
+[[extensions.targeting]]
+module = "./src/index.tsx"
+target = "purchase.thank-you.block.render"
