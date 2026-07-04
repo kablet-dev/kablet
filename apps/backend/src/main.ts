@@ -1,11 +1,26 @@
 import Fastify from 'fastify'
+import cors from '@fastify/cors'
 import { db } from './db.js'
 import { webhookRoutes } from './routes/webhook.js'
 import { opportunityRoutes } from './routes/opportunity.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 
+const PORT = parseInt(process.env.PORT ?? '3001', 10)
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
+
 const server = Fastify({
   logger: true
+})
+
+// CORS — allow the Next.js frontend, Shopify stores, and Shopify extension CDN
+await server.register(cors, {
+  origin: [
+    ALLOWED_ORIGIN,
+    /\.myshopify\.com$/,
+    /\.shopify\.com$/,
+    /\.shopifycdn\.com$/,
+  ],
+  credentials: true,
 })
 
 server.addContentTypeParser(
@@ -29,7 +44,7 @@ server.get('/health', async () => {
   }
 })
 
-// OAuth callback — exchanges Shopify code for access token
+// OAuth callback
 server.get('/auth/callback', async (request, reply) => {
   const { code, shop } = request.query as any
 
@@ -48,7 +63,6 @@ server.get('/auth/callback', async (request, reply) => {
   })
 
   const data = await response.json() as any
-
   server.log.info({ shop, accessToken: data.access_token }, 'OAuth completed')
 
   return reply.send({
@@ -64,7 +78,7 @@ await server.register(dashboardRoutes)
 
 const start = async () => {
   try {
-    await server.listen({ port: 3001, host: '0.0.0.0' })
+    await server.listen({ port: PORT, host: '0.0.0.0' })
   } catch (err) {
     server.log.error(err)
     process.exit(1)

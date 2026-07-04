@@ -55,9 +55,9 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       .eq('transaction_event_id', event.id)
       .single()
 
-    if (!instance || instance.current_state !== 'SELECTED') {
-      return reply.send({ opportunity: null })
-    }
+    if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
+  return reply.send({ opportunity: null })
+}
 
     const { data: definition } = await db
       .from('opportunity_definitions')

@@ -1,9 +1,14 @@
 {
   "name": "kablet",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev:backend": "npm run dev --workspace=@kablet/backend",
     "dev:web": "npm run dev --workspace=web"
+  },
+  "dependencies": {
+    "react-reconciler": "^0.33.0"
   }
 }
