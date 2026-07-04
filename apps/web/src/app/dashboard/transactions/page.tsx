@@ -108,16 +108,16 @@ export default async function TransactionsPage({
           </span>
           <div className="flex gap-2">
             {page > 1 && (
-              
-                href={`/dashboard/transactions?page=${page - 1}`}
+              <a
+                href={'/dashboard/transactions?page=' + (page - 1)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 Previous
               </a>
             )}
             {page < totalPages && (
-              
-                href={`/dashboard/transactions?page=${page + 1}`}
+              <a
+                href={'/dashboard/transactions?page=' + (page + 1)}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 Next
