@@ -4,6 +4,7 @@ import { db } from './db.js'
 import { webhookRoutes } from './routes/webhook.js'
 import { opportunityRoutes } from './routes/opportunity.js'
 import { dashboardRoutes } from './routes/dashboard.js'
+import { onboardingRoutes } from './routes/onboarding.js'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
@@ -75,6 +76,7 @@ server.get('/auth/callback', async (request, reply) => {
 await server.register(webhookRoutes)
 await server.register(opportunityRoutes)
 await server.register(dashboardRoutes)
+await server.register(onboardingRoutes)
 
 const start = async () => {
   try {
