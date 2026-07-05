@@ -83,6 +83,9 @@ export const adminApi = {
   getCatalog: () =>
     adminFetch<{ definitions: OpportunityDefinition[] }>('/admin/catalog'),
 
+  getAllPayouts: () =>
+    adminFetch<{ payouts: any[] }>('/admin/payouts'),
+
   activateDefinition: (id: string) =>
     fetch(`${API_URL}/admin/catalog/${id}/activate`, {
       method: 'PATCH',

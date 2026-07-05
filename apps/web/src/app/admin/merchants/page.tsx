@@ -1,4 +1,5 @@
 import { adminApi } from '@/lib/admin-api'
+import MerchantToggle from '@/components/MerchantToggle'
 
 export default async function MerchantsPage() {
   const { merchants } = await adminApi.getMerchants()
@@ -21,7 +22,7 @@ export default async function MerchantsPage() {
               <tr className="border-b border-gray-800">
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Merchant</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Store</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Controls</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Transactions</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Revenue</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Joined</th>
@@ -30,7 +31,6 @@ export default async function MerchantsPage() {
             <tbody className="divide-y divide-gray-800">
               {merchants.map(merchant => {
                 const config = merchant.merchant_configs?.[0]
-                const isActive = config?.engine_enabled && config?.offers_enabled
                 return (
                   <tr key={merchant.id} className="hover:bg-gray-800">
                     <td className="px-4 py-3">
@@ -41,13 +41,24 @@ export default async function MerchantsPage() {
                       {merchant.shopify_shop_domain}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${
-                        isActive
-                          ? 'bg-green-900 text-green-300'
-                          : 'bg-gray-800 text-gray-400'
-                      }`}>
-                        {isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <MerchantToggle
+                            merchantId={merchant.id}
+                            enabled={config?.engine_enabled ?? false}
+                            field="engine_enabled"
+                          />
+                          <span className="text-xs text-gray-400">Engine</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MerchantToggle
+                            merchantId={merchant.id}
+                            enabled={config?.offers_enabled ?? false}
+                            field="offers_enabled"
+                          />
+                          <span className="text-xs text-gray-400">Offers</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-300">
                       {merchant.transaction_count.toLocaleString()}

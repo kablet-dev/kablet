@@ -23,6 +23,25 @@ async function adminAuthMiddleware(request: FastifyRequest, reply: any) {
 export async function adminRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', adminAuthMiddleware)
 
+  // ── PATCH /admin/merchants/:id/config ───────────────────────────────
+fastify.patch('/admin/merchants/:id/config', async (request, reply) => {
+  const { id } = request.params as { id: string }
+  const body = request.body as any
+
+  const { data, error } = await db
+    .from('merchant_configs')
+    .update({
+      ...body,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('merchant_id', id)
+    .select()
+    .single()
+
+  if (error) return reply.status(500).send({ error: error.message })
+  return reply.send(data)
+})
+
   // ── GET /admin/summary ───────────────────────────────────────────────
   fastify.get('/admin/summary', async (request, reply) => {
     const { data: merchants } = await db
@@ -58,6 +77,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       acceptance_rate: acceptanceRate,
     })
   })
+
 
   // ── GET /admin/fulfillments ──────────────────────────────────────────
   fastify.get('/admin/fulfillments', async (request, reply) => {
@@ -239,4 +259,31 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
     return reply.send({ transactions: data, total: count ?? 0, page: pageNum })
   })
+  // ── GET /admin/payouts ───────────────────────────────────────────────
+fastify.get('/admin/payouts', async (request, reply) => {
+  const { data } = await db
+    .from('merchant_payouts')
+    .select(`*, merchants (name)`)
+    .order('created_at', { ascending: false })
+
+  return reply.send({ payouts: data ?? [] })
+})
+
+// ── PATCH /admin/payouts/:id/mark-paid ───────────────────────────────
+fastify.patch('/admin/payouts/:id/mark-paid', async (request, reply) => {
+  const { id } = request.params as { id: string }
+
+  const { data, error } = await db
+    .from('merchant_payouts')
+    .update({
+      status: 'PAID',
+      paid_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return reply.status(500).send({ error: error.message })
+  return reply.send(data)
+})
 }

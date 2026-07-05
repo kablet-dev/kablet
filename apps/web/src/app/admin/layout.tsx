@@ -14,17 +14,20 @@ export default function AdminLayout({
               Kablet <span className="text-violet-400 text-xs font-medium ml-1">ADMIN</span>
             </span>
             <Link href="/admin" className="text-sm text-gray-400 hover:text-white">
-              Overview
-            </Link>
-            <Link href="/admin/fulfillments" className="text-sm text-gray-400 hover:text-white">
-              Fulfillments
-            </Link>
-            <Link href="/admin/merchants" className="text-sm text-gray-400 hover:text-white">
-              Merchants
-            </Link>
-            <Link href="/admin/catalog" className="text-sm text-gray-400 hover:text-white">
-              Catalog
-            </Link>
+  Overview
+</Link>
+<Link href="/admin/fulfillments" className="text-sm text-gray-400 hover:text-white">
+  Fulfillments
+</Link>
+<Link href="/admin/merchants" className="text-sm text-gray-400 hover:text-white">
+  Merchants
+</Link>
+<Link href="/admin/catalog" className="text-sm text-gray-400 hover:text-white">
+  Catalog
+</Link>
+<Link href="/admin/payouts" className="text-sm text-gray-400 hover:text-white">
+  Payouts
+</Link>
           </div>
           <span className="text-xs text-gray-500">Internal only</span>
         </div>
