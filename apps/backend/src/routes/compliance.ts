@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { db } from '../db.js'
 
 export async function complianceRoutes(fastify: FastifyInstance) {
 
@@ -15,6 +16,36 @@ export async function complianceRoutes(fastify: FastifyInstance) {
     // Respond 200 to acknowledge — manual process for now
     return reply.status(200).send()
   })
+
+  // App uninstalled — disable merchant
+fastify.post('/webhooks/app/uninstalled', async (request, reply) => {
+  const payload = request.body as any
+  const shopDomain = payload.domain
+
+  fastify.log.info({ shopDomain }, 'App uninstalled')
+
+  if (shopDomain) {
+    // Disable merchant config when app is uninstalled
+    const { data: merchant } = await db
+      .from('merchants')
+      .select('id')
+      .eq('shopify_shop_domain', shopDomain)
+      .single()
+
+    if (merchant) {
+      await db
+        .from('merchant_configs')
+        .update({
+          engine_enabled: false,
+          offers_enabled: false,
+          shopify_enabled: false,
+        })
+        .eq('merchant_id', merchant.id)
+    }
+  }
+
+  return reply.status(200).send()
+})
 
   // Customer redact — delete customer data
   fastify.post('/webhooks/customers/redact', async (request, reply) => {

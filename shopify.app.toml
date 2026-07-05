@@ -13,16 +13,12 @@ redirect_urls = ["https://kablet-backend.onrender.com/auth/callback"]
 api_version = "2026-07"
 
   [[webhooks.subscriptions]]
-  topics = ["customers/data_request"]
-  uri = "/webhooks/customers/data_request"
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "https://kablet-backend.onrender.com/webhooks/customers/data_request"
 
   [[webhooks.subscriptions]]
-  topics = ["customers/redact"]
-  uri = "/webhooks/customers/redact"
-
-  [[webhooks.subscriptions]]
-  topics = ["shop/redact"]
-  uri = "/webhooks/shop/redact"
+  topics = ["app/uninstalled"]
+  uri = "/webhooks/app/uninstalled"
 
 [pos]
 embedded = false
