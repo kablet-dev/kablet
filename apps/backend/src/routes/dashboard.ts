@@ -92,26 +92,26 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     const offset = (pageNum - 1) * limit
 
     const { data, error, count } = await db
-      .from('transaction_events')
-      .select(`
-        id,
-        shopify_order_id,
-        transaction_value,
-        transaction_currency,
-        transaction_type,
-        received_at,
-        decision_records (
-          outcome_type,
-          opportunity_instances (
-            current_state,
-            customer_response,
-            outcome_value
-          )
-        )
-      `, { count: 'exact' })
-      .eq('merchant_id', request.merchantId!)
-      .order('received_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+  .from('transaction_events')
+  .select(`
+    id,
+    shopify_order_id,
+    transaction_value,
+    transaction_currency,
+    transaction_type,
+    received_at,
+    decision_records!inner (
+      outcome_type,
+      opportunity_instances (
+        current_state,
+        customer_response,
+        outcome_value
+      )
+    )
+  `, { count: 'exact' })
+  .eq('merchant_id', request.merchantId!)
+  .order('received_at', { ascending: false })
+  .range(offset, offset + limit - 1)
 
     if (error) {
       fastify.log.error({ error }, 'Failed to get transactions')
