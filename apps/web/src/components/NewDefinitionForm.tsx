@@ -112,10 +112,11 @@ export default function NewDefinitionForm() {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Shopify Variant ID</label>
-              <input name="shopify_product_variant_id" value={form.shopify_product_variant_id} onChange={handleChange} required
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-            </div>
+  <label className="block text-xs text-gray-400 mb-1">Shopify Variant ID (optional)</label>
+  <input name="shopify_product_variant_id" value={form.shopify_product_variant_id} onChange={handleChange}
+    placeholder="Optional for now"
+    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+</div>
 
             <div>
               <label className="block text-xs text-gray-400 mb-1">Product Price (AED)</label>

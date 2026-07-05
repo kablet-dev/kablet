@@ -180,7 +180,7 @@ fastify.patch('/admin/merchants/:id/config', async (request, reply) => {
         required_transaction_type: body.required_transaction_type ?? null,
         requires_shipping_address: body.requires_shipping_address ?? true,
         execution_method: 'PHYSICAL_SHIPMENT',
-        shopify_product_variant_id: body.shopify_product_variant_id,
+        shopify_product_variant_id: body.shopify_product_variant_id ?? 'pending',
         shopify_product_price: body.shopify_product_price,
         headline: body.headline,
         description: body.description,
