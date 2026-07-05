@@ -22,7 +22,7 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f6f6f7;
+      background: #f4f0fd;
       padding: 24px;
     }
     .tabs {
@@ -46,9 +46,9 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       border-right: none;
     }
     .tab.active {
-      color: #6d28d9;
-      border-bottom-color: #6d28d9;
-    }
+  color: #673de6;
+  border-bottom-color: #673de6;
+}
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .header { margin-bottom: 24px; }
@@ -79,7 +79,7 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     .badge-green { background: #d1fae5; color: #065f46; }
     .badge-gray { background: #f3f4f6; color: #6b7280; }
     .badge-yellow { background: #fef3c7; color: #92400e; }
-    .badge-purple { background: #ede9fe; color: #5b21b6; }
+    .badge-purple { background: #ede9fe; color: #5530c4; }
     .empty { text-align: center; padding: 32px; color: #9ca3af; font-size: 14px; }
     .loading { text-align: center; padding: 48px; color: #6b7280; }
     .revenue { color: #059669; font-weight: 600; }
@@ -106,9 +106,9 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       font-size: 14px;
       color: #111;
     }
-    .form-group input:focus { outline: none; border-color: #6d28d9; box-shadow: 0 0 0 2px rgba(109,40,217,0.1); }
+    .form-group input:focus { outline: none; border-color: #673de6; box-shadow: 0 0 0 2px rgba(109,40,217,0.1); }
     .btn {
-      background: #6d28d9;
+      background: #673de6;
       color: white;
       padding: 10px 20px;
       border-radius: 6px;
@@ -117,11 +117,11 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       border: none;
       cursor: pointer;
     }
-    .btn:hover { background: #5b21b6; }
+    .btn:hover { background: #5530c4; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .success-msg { color: #059669; font-size: 14px; margin-top: 12px; display: none; }
     .next-payout-banner {
-      background: linear-gradient(135deg, #6d28d9, #5b21b6);
+      background: linear-gradient(135deg, #673de6, #5530c4);
       color: white;
       border-radius: 8px;
       padding: 20px 24px;
@@ -208,7 +208,7 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     const { getSessionToken } = AppBridge.utilities;
 
     const app = createApp({
-      apiKey: '67a720f66e77c1e3f597ddef97dbde0e',
+      apiKey: '468a9b31e9ad02a319dbc3b88d6b4039',
       host: new URLSearchParams(window.location.search).get('host'),
     });
 
