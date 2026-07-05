@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? ''
@@ -14,29 +14,39 @@ export default function MerchantToggle({
   enabled: boolean
   field: 'engine_enabled' | 'offers_enabled'
 }) {
-  const router = useRouter()
+  const [isEnabled, setIsEnabled] = useState(enabled)
+  const [loading, setLoading] = useState(false)
 
   async function handleToggle() {
-    await fetch(`${API_URL}/admin/merchants/${merchantId}/config`, {
+    setLoading(true)
+    const newValue = !isEnabled
+    setIsEnabled(newValue) // Optimistic update
+
+    const res = await fetch(`${API_URL}/admin/merchants/${merchantId}/config`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${ADMIN_SECRET}`,
       },
-      body: JSON.stringify({ [field]: !enabled }),
+      body: JSON.stringify({ [field]: newValue }),
     })
-    router.refresh()
+
+    if (!res.ok) {
+      setIsEnabled(!newValue) // Revert on failure
+    }
+    setLoading(false)
   }
 
   return (
     <button
       onClick={handleToggle}
+      disabled={loading}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        enabled ? 'bg-violet-600' : 'bg-gray-700'
-      }`}
+        isEnabled ? 'bg-violet-600' : 'bg-gray-700'
+      } ${loading ? 'opacity-50' : ''}`}
     >
       <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-        enabled ? 'translate-x-5' : 'translate-x-1'
+        isEnabled ? 'translate-x-5' : 'translate-x-1'
       }`} />
     </button>
   )
