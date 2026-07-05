@@ -1,6 +1,6 @@
 name = "Kablet"
 client_id = "67a720f66e77c1e3f597ddef97dbde0e"
-application_url = "https://kablet-backend.onrender.com"
+application_url = "https://kablet-backend.onrender.com/app"
 embedded = true
 
 [access_scopes]

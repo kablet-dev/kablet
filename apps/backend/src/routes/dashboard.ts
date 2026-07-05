@@ -14,33 +14,60 @@ async function authMiddleware(request: FastifyRequest, reply: any) {
   }
 
   const token = authHeader.split(' ')[1]
+
+  // Try Supabase Auth first
   const { data: { user }, error } = await db.auth.getUser(token)
 
-  if (error || !user) {
-    return reply.status(401).send({ error: 'Invalid or expired token' })
+  if (!error && user) {
+    const { data: merchantUser } = await db
+      .from('merchant_users')
+      .select('merchant_id')
+      .eq('supabase_user_id', user.id)
+      .single()
+
+    if (!merchantUser) {
+      return reply.status(403).send({ error: 'No merchant account found' })
+    }
+
+    const { data: config } = await db
+      .from('merchant_configs')
+      .select('dashboard_enabled')
+      .eq('merchant_id', merchantUser.merchant_id)
+      .single()
+
+    if (!config?.dashboard_enabled) {
+      return reply.status(403).send({ error: 'Dashboard not enabled' })
+    }
+
+    request.merchantId = merchantUser.merchant_id
+    return
   }
 
-  const { data: merchantUser } = await db
-    .from('merchant_users')
-    .select('merchant_id')
-    .eq('supabase_user_id', user.id)
-    .single()
+  // Try Shopify session token (JWT)
+  try {
+    const parts = token.split('.')
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
+      const shopDomain = payload.dest?.replace('https://', '')
 
-  if (!merchantUser) {
-    return reply.status(403).send({ error: 'No merchant account found' })
+      if (shopDomain) {
+        const { data: merchant } = await db
+          .from('merchants')
+          .select('id')
+          .eq('shopify_shop_domain', shopDomain)
+          .single()
+
+        if (merchant) {
+          request.merchantId = merchant.id
+          return
+        }
+      }
+    }
+  } catch {
+    // Not a valid Shopify session token
   }
 
-  const { data: config } = await db
-    .from('merchant_configs')
-    .select('dashboard_enabled')
-    .eq('merchant_id', merchantUser.merchant_id)
-    .single()
-
-  if (!config?.dashboard_enabled) {
-    return reply.status(403).send({ error: 'Dashboard not enabled' })
-  }
-
-  request.merchantId = merchantUser.merchant_id
+  return reply.status(401).send({ error: 'Invalid token' })
 }
 
 export async function dashboardRoutes(fastify: FastifyInstance) {
