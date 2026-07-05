@@ -8,6 +8,7 @@ import { onboardingRoutes } from './routes/onboarding.js'
 import { adminRoutes } from './routes/admin.js'
 import { embeddedRoutes } from './routes/embedded.js'
 import { payoutRoutes } from './routes/payouts.js'
+import { complianceRoutes } from './routes/compliance.js'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
@@ -164,6 +165,7 @@ await server.register(onboardingRoutes)
 await server.register(adminRoutes)
 await server.register(embeddedRoutes)
 await server.register(payoutRoutes)
+await server.register(complianceRoutes)
 
 const start = async () => {
   try {
