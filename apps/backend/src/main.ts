@@ -23,6 +23,7 @@ await server.register(cors, {
     /\.myshopify\.com$/,
     /\.shopify\.com$/,
     /\.shopifycdn\.com$/,
+    /\.netlify\.app$/,
   ],
   credentials: true,
 })
