@@ -6,6 +6,7 @@ import { opportunityRoutes } from './routes/opportunity.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { onboardingRoutes } from './routes/onboarding.js'
 import { adminRoutes } from './routes/admin.js'
+import { embeddedRoutes } from './routes/embedded.js'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
@@ -68,7 +69,18 @@ server.get('/auth/callback', async (request, reply) => {
   server.log.info({ shop, accessToken: data.access_token }, 'OAuth completed')
 
   // Redirect to onboarding page instead of returning JSON
+  // Check if merchant exists — if yes, go to app, if no, go to onboarding
+const { data: merchant } = await db
+  .from('merchants')
+  .select('id')
+  .eq('shopify_shop_domain', shop)
+  .single()
+
+if (merchant) {
+  return reply.redirect(`/app?shop=${shop}`)
+} else {
   return reply.redirect(`/?shop=${shop}`)
+}
 })
 
 await server.register(webhookRoutes)
@@ -76,6 +88,7 @@ await server.register(opportunityRoutes)
 await server.register(dashboardRoutes)
 await server.register(onboardingRoutes)
 await server.register(adminRoutes)
+await server.register(embeddedRoutes)
 
 const start = async () => {
   try {
