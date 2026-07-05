@@ -1,5 +1,6 @@
 import { adminApi } from '@/lib/admin-api'
 import CatalogActions from '@/components/CatalogActions'
+import NewDefinitionForm from '@/components/NewDefinitionForm'
 
 export default async function CatalogPage() {
   const { definitions } = await adminApi.getCatalog()
@@ -19,6 +20,8 @@ export default async function CatalogPage() {
           <p className="text-sm text-gray-400 mt-1">{definitions.length} definitions</p>
         </div>
       </div>
+
+      <NewDefinitionForm />
 
       <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
         {definitions.length === 0 ? (
