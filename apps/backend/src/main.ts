@@ -56,6 +56,7 @@ server.get('/auth/callback', async (request, reply) => {
     return reply.status(400).send({ error: 'Missing code or shop' })
   }
 
+  // Exchange code for access token
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,21 +68,92 @@ server.get('/auth/callback', async (request, reply) => {
   })
 
   const data = await response.json() as any
-  server.log.info({ shop, accessToken: data.access_token }, 'OAuth completed')
+  const accessToken = data.access_token
 
-  // Redirect to onboarding page instead of returning JSON
-  // Check if merchant exists — if yes, go to app, if no, go to onboarding
-const { data: merchant } = await db
-  .from('merchants')
-  .select('id')
-  .eq('shopify_shop_domain', shop)
-  .single()
+  if (!accessToken) {
+    return reply.status(400).send({ error: 'Failed to get access token' })
+  }
 
-if (merchant) {
-  return reply.redirect(`/app?shop=${shop}`)
-} else {
+  server.log.info({ shop }, 'OAuth completed')
+
+  // Get shop details from Shopify
+  const shopResponse = await fetch(
+    `https://${shop}/admin/api/2026-07/shop.json`,
+    { headers: { 'X-Shopify-Access-Token': accessToken } }
+  )
+  const shopData = await shopResponse.json() as any
+  const shopName = shopData?.shop?.name ?? shop
+
+  // Check if merchant already exists
+  const { data: existingMerchant } = await db
+    .from('merchants')
+    .select('id')
+    .eq('shopify_shop_domain', shop)
+    .single()
+
+  if (!existingMerchant) {
+    // Create new merchant automatically
+    const { data: newMerchant, error } = await db
+      .from('merchants')
+      .insert({
+        name: shopName,
+        shopify_shop_domain: shop,
+        shopify_access_token: accessToken,
+        shopify_webhook_secret: process.env.SHOPIFY_CLIENT_SECRET ?? '',
+        geography: 'AE',
+      })
+      .select('id')
+      .single()
+
+    if (!error && newMerchant) {
+      // Create merchant config
+      await db.from('merchant_configs').insert({
+        merchant_id: newMerchant.id,
+        engine_enabled: true,
+        offers_enabled: true,
+        dashboard_enabled: true,
+        shopify_enabled: true,
+      })
+
+      // Register webhook automatically
+      await fetch(
+        `https://${shop}/admin/api/2026-07/webhooks.json`,
+        {
+          method: 'POST',
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            webhook: {
+              topic: 'orders/create',
+              address: `${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order`,
+              format: 'json',
+            }
+          })
+        }
+      )
+
+      server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
+    }
+  } else {
+    // Update access token if merchant already exists
+    await db
+      .from('merchants')
+      .update({ shopify_access_token: accessToken })
+      .eq('shopify_shop_domain', shop)
+
+    server.log.info({ shop }, 'Existing merchant token updated')
+  }
+
+  // Redirect to app or onboarding
+  const { data: merchant } = await db
+    .from('merchants')
+    .select('id')
+    .eq('shopify_shop_domain', shop)
+    .single()
+
   return reply.redirect(`/?shop=${shop}`)
-}
 })
 
 await server.register(webhookRoutes)
