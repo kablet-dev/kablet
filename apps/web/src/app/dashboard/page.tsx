@@ -79,8 +79,8 @@ export default async function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {transactionsData.transactions.map(transaction => {
-                  const decision = transaction.decision_records?.[0]
-                  const instance = decision?.opportunity_instances?.[0]
+                  const decision = transaction.decision
+const instance = transaction.instance
 
                   return (
                     <tr key={transaction.id} className="hover:bg-gray-50">

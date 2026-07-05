@@ -179,27 +179,29 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
 
         let html = '<table><thead><tr><th>Date</th><th>Order Value</th><th>Decision</th><th>Status</th><th>Revenue</th></tr></thead><tbody>';
 
-        txData.transactions.forEach(tx => {
-          const decision = tx.decision_records?.[0];
-          const instance = decision?.opportunity_instances?.[0];
-          const date = new Date(tx.received_at).toLocaleDateString();
-          const value = tx.transaction_currency + ' ' + Number(tx.transaction_value).toFixed(2);
-          const decisionText = decision?.outcome_type === 'OPPORTUNITY_IDENTIFIED' ? 'Offer shown'
-            : decision?.outcome_type === 'NO_ELIGIBLE_OPPORTUNITIES' ? 'No match' : '—';
-          
-          let statusBadge = '—';
-          if (instance) {
-            const stateClass = instance.current_state === 'COMPLETED' ? 'badge-green'
-              : instance.current_state === 'DECLINED' ? 'badge-gray' : 'badge-yellow';
-            statusBadge = '<span class="badge ' + stateClass + '">' + instance.current_state.toLowerCase() + '</span>';
-          }
+       txData.transactions.forEach(tx => {
+  const decision = tx.decision;
+  const instance = tx.instance;
+  const date = new Date(tx.received_at).toLocaleDateString();
+  const value = tx.transaction_currency + ' ' + Number(tx.transaction_value).toFixed(2);
+  const decisionText = decision?.outcome_type === 'OPPORTUNITY_IDENTIFIED' ? 'Offer shown'
+    : decision?.outcome_type === 'NO_ELIGIBLE_OPPORTUNITIES' ? 'No match' 
+    : decision?.outcome_type === 'CATALOG_EMPTY' ? 'No catalog'
+    : '—';
+  
+  let statusBadge = '—';
+  if (instance) {
+    const stateClass = instance.current_state === 'COMPLETED' ? 'badge-green'
+      : instance.current_state === 'DECLINED' ? 'badge-gray' : 'badge-yellow';
+    statusBadge = '<span class="badge ' + stateClass + '">' + instance.current_state.toLowerCase() + '</span>';
+  }
 
-          const revenue = instance?.outcome_value
-            ? '<span class="revenue">AED ' + Number(instance.outcome_value).toFixed(2) + '</span>'
-            : '—';
+  const revenue = instance?.outcome_value
+    ? '<span class="revenue">AED ' + Number(instance.outcome_value).toFixed(2) + '</span>'
+    : '—';
 
-          html += '<tr><td>' + date + '</td><td>' + value + '</td><td>' + decisionText + '</td><td>' + statusBadge + '</td><td>' + revenue + '</td></tr>';
-        });
+  html += '<tr><td>' + date + '</td><td>' + value + '</td><td>' + decisionText + '</td><td>' + statusBadge + '</td><td>' + revenue + '</td></tr>';
+});
 
         html += '</tbody></table>';
         document.getElementById('transactions').innerHTML = html;

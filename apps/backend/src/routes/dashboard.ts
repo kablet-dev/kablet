@@ -86,42 +86,46 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
   })
 
   fastify.get('/dashboard/transactions', async (request, reply) => {
-    const { page = '1' } = request.query as Record<string, string>
-    const pageNum = Math.max(1, parseInt(page))
-    const limit = 20
-    const offset = (pageNum - 1) * limit
+  const { page = '1' } = request.query as Record<string, string>
+  const pageNum = Math.max(1, parseInt(page))
+  const limit = 20
+  const offset = (pageNum - 1) * limit
 
-    const { data, error, count } = await db
-  .from('transaction_events')
-  .select(`
-    id,
-    shopify_order_id,
-    transaction_value,
-    transaction_currency,
-    transaction_type,
-    received_at,
-    decision_records!inner (
-      outcome_type,
-      opportunity_instances (
-        current_state,
-        customer_response,
-        outcome_value
-      )
-    )
-  `, { count: 'exact' })
-  .eq('merchant_id', request.merchantId!)
-  .order('received_at', { ascending: false })
-  .range(offset, offset + limit - 1)
+  const { data: transactions, count } = await db
+    .from('transaction_events')
+    .select('id, shopify_order_id, transaction_value, transaction_currency, transaction_type, received_at', { count: 'exact' })
+    .eq('merchant_id', request.merchantId!)
+    .order('received_at', { ascending: false })
+    .range(offset, offset + limit - 1)
 
-    if (error) {
-      fastify.log.error({ error }, 'Failed to get transactions')
-      return reply.status(500).send({ error: 'Failed to load transactions' })
-    }
+  if (!transactions) {
+    return reply.send({ transactions: [], total: 0, page: pageNum })
+  }
 
-    return reply.send({
-      transactions: data,
-      total: count ?? 0,
-      page: pageNum,
-    })
+  // Fetch decisions and instances for these transactions
+  const txIds = transactions.map(t => t.id)
+
+  const { data: decisions } = await db
+    .from('decision_records')
+    .select('transaction_event_id, outcome_type')
+    .in('transaction_event_id', txIds)
+
+  const { data: instances } = await db
+    .from('opportunity_instances')
+    .select('transaction_event_id, current_state, customer_response, outcome_value')
+    .in('transaction_event_id', txIds)
+
+  // Merge data
+  const result = transactions.map(tx => ({
+    ...tx,
+    decision: decisions?.find(d => d.transaction_event_id === tx.id) ?? null,
+    instance: instances?.find(i => i.transaction_event_id === tx.id) ?? null,
+  }))
+
+  return reply.send({
+    transactions: result,
+    total: count ?? 0,
+    page: pageNum,
   })
+})
 }

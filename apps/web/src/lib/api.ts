@@ -33,14 +33,14 @@ export interface Transaction {
   transaction_currency: string
   transaction_type: string
   received_at: string
-  decision_records: Array<{
+  decision: {
     outcome_type: string
-    opportunity_instances: Array<{
-      current_state: string
-      customer_response: string | null
-      outcome_value: number | null
-    }>
-  }>
+  } | null
+  instance: {
+    current_state: string
+    customer_response: string | null
+    outcome_value: number | null
+  } | null
 }
 
 export const api = {
