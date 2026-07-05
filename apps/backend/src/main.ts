@@ -145,7 +145,17 @@ server.get('/auth/callback', async (request, reply) => {
       .update({ shopify_access_token: accessToken })
       .eq('shopify_shop_domain', shop)
 
-    server.log.info({ shop }, 'Existing merchant token updated')
+    // Re-enable merchant config in case they reinstalled after uninstalling
+    await db
+      .from('merchant_configs')
+      .update({
+        engine_enabled: true,
+        offers_enabled: true,
+        shopify_enabled: true,
+      })
+      .eq('merchant_id', existingMerchant.id)
+
+    server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
   }
 
   // Redirect to app or onboarding
