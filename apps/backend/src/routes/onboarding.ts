@@ -444,37 +444,16 @@ export async function onboardingRoutes(fastify: FastifyInstance) {
     }
 
     async function verifyActivation() {
-      const btn = document.getElementById('verify-btn');
-      btn.textContent = 'Verifying...';
-      btn.disabled = true;
-      document.getElementById('error-msg').style.display = 'none';
+  const btn = document.getElementById('verify-btn');
+  btn.textContent = 'Activating...';
+  btn.disabled = true;
+  setTimeout(() => showActivated(), 800);
+}
 
-      // Try App Bridge detection
-      if (app) {
-        try {
-          const extensions = await app.extensions();
-          const kabletExtension = extensions.find(ext =>
-            ext.handle === 'kablet-offer' || ext.type === 'ui_extension'
-          );
-
-          if (kabletExtension && kabletExtension.activations?.length > 0) {
-            showActivated();
-            return;
-          }
-        } catch(e) {
-          // Fall through to manual confirmation
-        }
-      }
-
-      // If App Bridge detection fails or not embedded, show activated state
-      // (merchant confirmed they completed setup)
-      showActivated();
-    }
-
-    function showActivated() {
-      document.getElementById('setup-state').style.display = 'none';
-      document.getElementById('activated-state').style.display = 'block';
-    }
+function showActivated() {
+  document.getElementById('setup-state').style.display = 'none';
+  document.getElementById('activated-state').style.display = 'block';
+}
   </script>
 </body>
 </html>
