@@ -2,11 +2,13 @@ import {
   reactExtension,
   BlockStack,
   InlineLayout,
+  InlineStack,
   Button,
   Image,
   Text,
-  Divider,
   View,
+  Badge,
+  Link,
   useApi,
   useShop,
 } from '@shopify/ui-extensions-react/checkout'
@@ -33,9 +35,7 @@ function useCountdown(seconds: number) {
 
   useEffect(() => {
     if (timeLeft <= 0) return
-    const timer = setInterval(() => {
-      setTimeLeft(t => t - 1)
-    }, 1000)
+    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000)
     return () => clearInterval(timer)
   }, [timeLeft])
 
@@ -127,153 +127,173 @@ function App() {
   // Success state
   if (accepted) {
     return (
-      <BlockStack spacing="none">
-        <Divider />
-        <View padding="base">
-          <BlockStack spacing="base">
-            <InlineLayout columns={['auto', 'fill']} spacing="base">
-              <View>
-                <Text size="large" emphasis="bold">✓</Text>
-              </View>
-              <BlockStack spacing="extraTight">
-                <Text size="medium" emphasis="bold">Added to your order!</Text>
-                <Text size="small" appearance="subdued">
-                  Your item is confirmed and will be delivered separately.
-                </Text>
-              </BlockStack>
-            </InlineLayout>
-            <View
-              padding="base"
-              border="base"
-              borderRadius="base"
-              background="secondary"
-            >
-              <BlockStack spacing="extraTight">
-                <Text size="small" appearance="subdued">Estimated delivery</Text>
-                <Text size="medium" emphasis="bold">{deliveryDate}</Text>
-                <Text size="extraSmall" appearance="subdued">
-                  Cash on Delivery · Shipped separately
-                </Text>
-              </BlockStack>
-            </View>
-            <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
-          </BlockStack>
-        </View>
-      </BlockStack>
+      <View
+        padding="base"
+        border="base"
+        borderRadius="base"
+        background="primary"
+      >
+        <BlockStack spacing="base">
+          <InlineLayout columns={['auto', 'fill']} spacing="base">
+            <Text size="large" emphasis="bold">✓</Text>
+            <BlockStack spacing="extraTight">
+              <Text size="medium" emphasis="bold">Added to your order!</Text>
+              <Text size="small" appearance="subdued">
+                Your item is confirmed and will be delivered separately.
+              </Text>
+            </BlockStack>
+          </InlineLayout>
+          <View
+            padding="base"
+            border="base"
+            borderRadius="base"
+            background="secondary"
+          >
+            <BlockStack spacing="extraTight">
+              <Text size="small" appearance="subdued">Estimated delivery</Text>
+              <Text size="medium" emphasis="bold">{deliveryDate}</Text>
+              <Text size="extraSmall" appearance="subdued">
+                Cash on Delivery · Shipped separately
+              </Text>
+            </BlockStack>
+          </View>
+          <InlineLayout columns={['fill', 'auto']} spacing="base">
+  <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
+  <Link to="https://kablet.com/privacy/" appearance="monochrome">
+    <Text size="extraSmall" appearance="subdued">Privacy</Text>
+  </Link>
+</InlineLayout>
+        </BlockStack>
+      </View>
     )
   }
 
   if (responded) return null
 
+  const stars = opportunity.trustRating
+    ? '★'.repeat(Math.floor(opportunity.trustRating)) + (opportunity.trustRating % 1 >= 0.5 ? '½' : '')
+    : null
+
   return (
-    <BlockStack spacing="none">
-      <Divider />
-      <View padding="base">
-        <BlockStack spacing="base">
+    <View
+      padding="base"
+      border="base"
+      borderRadius="base"
+      background="primary"
+    >
+      <BlockStack spacing="base">
 
-          {/* Header: label + countdown */}
-          <InlineLayout columns={['fill', 'auto']} spacing="base">
-            <Text size="small" appearance="subdued" emphasis="bold">
-              Recommended for you
-            </Text>
-            <Text size="extraSmall" appearance="subdued">
-              Offer expires in {countdown}
-            </Text>
-          </InlineLayout>
-
-          {/* Image + content */}
-          <InlineLayout columns={[120, 'fill']} spacing="base">
-            <Image
-              source={opportunity.visualAssetUrl}
-              accessibilityDescription="Product image"
-            />
-            <BlockStack spacing="tight">
-              <Text size="medium" emphasis="bold">
-                {opportunity.headline}
-              </Text>
-              <Text size="small" appearance="subdued">
-                {opportunity.description}
-              </Text>
-              <Text size="large" emphasis="bold">
-                {opportunity.valueProposition}
-              </Text>
-            </BlockStack>
-          </InlineLayout>
-
-          {/* Value bullets */}
-          {opportunity.valueBullets && opportunity.valueBullets.length > 0 && (
-            <BlockStack spacing="extraTight">
-              {opportunity.valueBullets.map((bullet, i) => (
-                <Text key={i} size="small" appearance="subdued">
-                  ✓ {bullet}
-                </Text>
-              ))}
-            </BlockStack>
-          )}
-
-          {/* Social proof */}
-          {(opportunity.trustRating || opportunity.socialProof) && (
-            <InlineLayout columns={['auto', 'fill']} spacing="tight">
-              {opportunity.trustRating && (
-                <Text size="small" emphasis="bold">
-                  {'★'.repeat(Math.floor(opportunity.trustRating))} {opportunity.trustRating}
-                </Text>
-              )}
-              {opportunity.socialProof && (
-                <Text size="small" appearance="subdued">
-                  {opportunity.socialProof}
-                </Text>
-              )}
-            </InlineLayout>
-          )}
-
-          {/* CTAs */}
-          <BlockStack spacing="tight">
-            <Button
-              loading={accepting}
-              onPress={async () => {
-                setAccepting(true)
-                await fetch(`${API_BASE}/opportunity/response`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    instanceId: opportunity.instanceId,
-                    response: 'ACCEPTED',
-                    shopDomain,
-                  }),
-                })
-                setAccepting(false)
-                setAccepted(true)
-              }}
-            >
-              {opportunity.ctaLabel}
-            </Button>
-            <Button
-              kind="secondary"
-              onPress={async () => {
-                await fetch(`${API_BASE}/opportunity/response`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    instanceId: opportunity.instanceId,
-                    response: 'DECLINED',
-                    shopDomain,
-                  }),
-                })
-                setResponded(true)
-              }}
-            >
-              No thanks
-            </Button>
-          </BlockStack>
-
-          {/* Powered by Kablet */}
+        {/* Header: badge + countdown */}
+        <InlineLayout columns={['fill', 'auto']} spacing="base">
+          <Badge tone="info">✦ Recommended for you</Badge>
           <Text size="extraSmall" appearance="subdued">
-            Powered by Kablet
+            Offer ends in {countdown}
           </Text>
+        </InlineLayout>
 
+        {/* Image + content */}
+<InlineLayout columns={[100, 'fill']} spacing="base">
+  <Image
+    source={opportunity.visualAssetUrl}
+    accessibilityDescription="Product image"
+  />
+  <BlockStack spacing="tight">
+    <Text size="medium" emphasis="bold">
+      {opportunity.headline}
+    </Text>
+    <Text size="small" appearance="subdued">
+      {opportunity.description}
+    </Text>
+    <Text size="large" emphasis="bold">
+      {opportunity.valueProposition}
+    </Text>
+    <Text size="small" appearance="subdued">
+      🚚 Delivered separately to your door
+    </Text>
+    {opportunity.valueBullets && opportunity.valueBullets.length > 0 && (
+      <InlineStack spacing="tight">
+        {opportunity.valueBullets.map((bullet, i) => (
+          <View
+            key={i}
+            border="base"
+            borderRadius="base"
+            padding="extraTight"
+          >
+            <InlineStack spacing="extraTight">
+              <Text size="extraSmall" emphasis="bold">✓</Text>
+              <Text size="extraSmall">{bullet}</Text>
+            </InlineStack>
+          </View>
+        ))}
+      </InlineStack>
+    )}
+  </BlockStack>
+</InlineLayout>
+
+{/* Social proof */}
+{(opportunity.trustRating || opportunity.socialProof) && (
+  <View>
+    <InlineStack spacing="tight">
+      <Text size="small" emphasis="bold">★★★★★ {opportunity.trustRating}</Text>
+      {opportunity.socialProof && (
+        <Text size="small" appearance="subdued">{opportunity.socialProof}</Text>
+      )}
+    </InlineStack>
+  </View>
+)}
+
+        {/* CTAs */}
+        <BlockStack spacing="tight">
+          <Button
+            loading={accepting}
+            onPress={async () => {
+              setAccepting(true)
+              await fetch(`${API_BASE}/opportunity/response`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  instanceId: opportunity.instanceId,
+                  response: 'ACCEPTED',
+                  shopDomain,
+                }),
+              })
+              setAccepting(false)
+              setAccepted(true)
+            }}
+          >
+            {opportunity.ctaLabel}
+          </Button>
+          <Button
+            kind="secondary"
+            onPress={async () => {
+              await fetch(`${API_BASE}/opportunity/response`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  instanceId: opportunity.instanceId,
+                  response: 'DECLINED',
+                  shopDomain,
+                }),
+              })
+              setResponded(true)
+            }}
+          >
+            No thanks
+          </Button>
         </BlockStack>
-      </View>
-    </BlockStack>
+
+        {/* Footer */}
+        <InlineLayout columns={['fill', 'auto']} spacing="base">
+  <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
+  <Link
+    to="https://kablet.com/privacy/"
+    appearance="monochrome"
+  >
+    <Text size="extraSmall" appearance="subdued">Privacy</Text>
+  </Link>
+</InlineLayout>
+
+      </BlockStack>
+    </View>
   )
 }
