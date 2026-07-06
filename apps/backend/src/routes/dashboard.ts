@@ -7,6 +7,27 @@ declare module 'fastify' {
   }
 }
 
+function getPeriodFilter(period: string): string | null {
+  const now = new Date()
+  switch (period) {
+    case 'today':
+      const today = new Date(now)
+      today.setHours(0, 0, 0, 0)
+      return today.toISOString()
+    case '7d':
+      const d7 = new Date(now)
+      d7.setDate(d7.getDate() - 7)
+      return d7.toISOString()
+    case '30d':
+      const d30 = new Date(now)
+      d30.setDate(d30.getDate() - 30)
+      return d30.toISOString()
+    case 'lifetime':
+    default:
+      return null
+  }
+}
+
 async function authMiddleware(request: FastifyRequest, reply: any) {
   const authHeader = request.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
@@ -15,9 +36,8 @@ async function authMiddleware(request: FastifyRequest, reply: any) {
 
   const token = authHeader.split(' ')[1]
 
-  // Try Supabase Auth first
+  // Try Supabase Auth
   const { data: { user }, error } = await db.auth.getUser(token)
-
   if (!error && user) {
     const { data: merchantUser } = await db
       .from('merchant_users')
@@ -43,7 +63,7 @@ async function authMiddleware(request: FastifyRequest, reply: any) {
     return
   }
 
-  // Try Shopify session token (JWT)
+  // Try Shopify session token
   try {
     const parts = token.split('.')
     if (parts.length === 3) {
@@ -63,9 +83,7 @@ async function authMiddleware(request: FastifyRequest, reply: any) {
         }
       }
     }
-  } catch {
-    // Not a valid Shopify session token
-  }
+  } catch {}
 
   return reply.status(401).send({ error: 'Invalid token' })
 }
@@ -73,59 +91,160 @@ async function authMiddleware(request: FastifyRequest, reply: any) {
 export async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', authMiddleware)
 
+  // ── GET /dashboard/summary ───────────────────────────────────────────
   fastify.get('/dashboard/summary', async (request, reply) => {
-    const { data, error } = await db
-      .rpc('get_merchant_summary', { p_merchant_id: request.merchantId })
+    const { period = 'lifetime' } = request.query as { period?: string }
+    const merchantId = request.merchantId!
+    const since = getPeriodFilter(period)
 
-    if (error) {
-      fastify.log.error({ error }, 'Failed to get merchant summary')
-      return reply.status(500).send({ error: 'Failed to load summary' })
+    // Get transactions in period
+    let txQuery = db
+      .from('transaction_events')
+      .select('id')
+      .eq('merchant_id', merchantId)
+
+    if (since) txQuery = txQuery.gte('received_at', since)
+    const { data: transactions } = await txQuery
+
+    const txIds = transactions?.map(t => t.id) ?? []
+
+    if (txIds.length === 0) {
+      return reply.send({
+        total_revenue: 0,
+        transactions_processed: 0,
+        opportunities_presented: 0,
+        opportunities_accepted: 0,
+        acceptance_rate: 0,
+        revenue_per_order: 0,
+      })
     }
 
-    return reply.send(data)
+    // Get instances for these transactions
+    const { data: instances } = await db
+      .from('opportunity_instances')
+      .select('current_state, customer_response, outcome_value')
+      .eq('merchant_id', merchantId)
+      .in('transaction_event_id', txIds)
+
+    const completed = instances?.filter(i => i.current_state === 'COMPLETED') ?? []
+    const presented = instances?.filter(i =>
+      ['PRESENTED', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'COMPLETED', 'FAILED'].includes(i.current_state)
+    ) ?? []
+    const accepted = instances?.filter(i => i.customer_response === 'ACCEPTED') ?? []
+
+    const totalRevenue = completed.reduce((sum, i) => sum + (Number(i.outcome_value) ?? 0), 0)
+    const acceptanceRate = presented.length > 0
+      ? Math.round((accepted.length / presented.length) * 100 * 10) / 10
+      : 0
+    const revenuePerOrder = txIds.length > 0
+      ? Math.round((totalRevenue / txIds.length) * 100) / 100
+      : 0
+
+    return reply.send({
+      total_revenue: totalRevenue,
+      transactions_processed: txIds.length,
+      opportunities_presented: presented.length,
+      opportunities_accepted: accepted.length,
+      acceptance_rate: acceptanceRate,
+      revenue_per_order: revenuePerOrder,
+    })
   })
 
+  // ── GET /dashboard/transactions ──────────────────────────────────────
   fastify.get('/dashboard/transactions', async (request, reply) => {
-  const { page = '1' } = request.query as Record<string, string>
-  const pageNum = Math.max(1, parseInt(page))
-  const limit = 20
-  const offset = (pageNum - 1) * limit
+    const { page = '1', period = 'lifetime' } = request.query as Record<string, string>
+    const pageNum = Math.max(1, parseInt(page))
+    const limit = 20
+    const offset = (pageNum - 1) * limit
+    const since = getPeriodFilter(period)
+    const merchantId = request.merchantId!
 
-  const { data: transactions, count } = await db
-    .from('transaction_events')
-    .select('id, shopify_order_id, transaction_value, transaction_currency, transaction_type, received_at', { count: 'exact' })
-    .eq('merchant_id', request.merchantId!)
-    .order('received_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+    let query = db
+      .from('transaction_events')
+      .select('id, shopify_order_id, transaction_value, transaction_currency, transaction_type, received_at', { count: 'exact' })
+      .eq('merchant_id', merchantId)
+      .order('received_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
-  if (!transactions) {
-    return reply.send({ transactions: [], total: 0, page: pageNum })
-  }
+    if (since) query = query.gte('received_at', since)
 
-  // Fetch decisions and instances for these transactions
-  const txIds = transactions.map(t => t.id)
+    const { data: transactions, count } = await query
 
-  const { data: decisions } = await db
-    .from('decision_records')
-    .select('transaction_event_id, outcome_type')
-    .in('transaction_event_id', txIds)
+    if (!transactions || transactions.length === 0) {
+      return reply.send({ transactions: [], total: 0, page: pageNum })
+    }
 
-  const { data: instances } = await db
-    .from('opportunity_instances')
-    .select('transaction_event_id, current_state, customer_response, outcome_value')
-    .in('transaction_event_id', txIds)
+    const txIds = transactions.map(t => t.id)
 
-  // Merge data
-  const result = transactions.map(tx => ({
-    ...tx,
-    decision: decisions?.find(d => d.transaction_event_id === tx.id) ?? null,
-    instance: instances?.find(i => i.transaction_event_id === tx.id) ?? null,
-  }))
+    // Fetch decisions
+    const { data: decisions } = await db
+      .from('decision_records')
+      .select('transaction_event_id, outcome_type, selected_definition_id')
+      .in('transaction_event_id', txIds)
 
-  return reply.send({
-    transactions: result,
-    total: count ?? 0,
-    page: pageNum,
+    // Fetch instances
+    const { data: instances } = await db
+      .from('opportunity_instances')
+      .select('transaction_event_id, current_state, customer_response, outcome_value')
+      .in('transaction_event_id', txIds)
+
+    // Fetch definition names
+    const definitionIds = decisions
+      ?.map(d => d.selected_definition_id)
+      .filter(Boolean) ?? []
+
+    const { data: definitions } = definitionIds.length > 0
+      ? await db
+          .from('opportunity_definitions')
+          .select('id, name')
+          .in('id', definitionIds)
+      : { data: [] }
+
+    const result = transactions.map(tx => {
+      const decision = decisions?.find(d => d.transaction_event_id === tx.id) ?? null
+      const instance = instances?.find(i => i.transaction_event_id === tx.id) ?? null
+      const definition = decision?.selected_definition_id
+        ? definitions?.find(d => d.id === decision.selected_definition_id) ?? null
+        : null
+
+      return {
+        ...tx,
+        decision,
+        instance,
+        offer_name: definition?.name ?? null,
+      }
+    })
+
+    return reply.send({
+      transactions: result,
+      total: count ?? 0,
+      page: pageNum,
+    })
   })
+
+  // ── GET /dashboard/config ────────────────────────────────────────────
+fastify.get('/dashboard/config', async (request, reply) => {
+  const { data } = await db
+    .from('merchant_configs')
+    .select('offers_enabled, engine_enabled')
+    .eq('merchant_id', request.merchantId!)
+    .single()
+
+  return reply.send(data ?? { offers_enabled: true, engine_enabled: true })
+})
+
+// ── PATCH /dashboard/config ──────────────────────────────────────────
+fastify.patch('/dashboard/config', async (request, reply) => {
+  const body = request.body as any
+
+  const { data, error } = await db
+    .from('merchant_configs')
+    .update(body)
+    .eq('merchant_id', request.merchantId!)
+    .select()
+    .single()
+
+  if (error) return reply.status(500).send({ error: error.message })
+  return reply.send(data)
 })
 }
