@@ -1,11 +1,10 @@
 import {
   reactExtension,
-  Text,
   BlockStack,
   InlineLayout,
   Button,
   Image,
-  Heading,
+  Text,
   Divider,
   View,
   useApi,
@@ -24,6 +23,9 @@ interface Opportunity {
   valueProposition: string
   visualAssetUrl: string
   ctaLabel: string
+  valueBullets: string[]
+  socialProof: string | null
+  trustRating: number | null
 }
 
 function useCountdown(seconds: number) {
@@ -42,6 +44,21 @@ function useCountdown(seconds: number) {
   return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
+function getDeliveryDate(): string {
+  const date = new Date()
+  let daysAdded = 0
+  while (daysAdded < 2) {
+    date.setDate(date.getDate() + 1)
+    const day = date.getDay()
+    if (day !== 0 && day !== 6) daysAdded++
+  }
+  return date.toLocaleDateString('en-AE', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
 function App() {
   const api = useApi()
   const shop = useShop()
@@ -53,24 +70,22 @@ function App() {
   const [orderId, setOrderId] = useState<string | null>(null)
 
   const shopDomain = shop?.myshopifyDomain
-  const countdown = useCountdown(600) // 10 minutes
+  const countdown = useCountdown(600)
+  const deliveryDate = getDeliveryDate()
 
-  // Subscribe to orderConfirmation signal
   useEffect(() => {
     const orderConfirmation = (api as any)?.orderConfirmation
     if (!orderConfirmation) return
 
     const current = orderConfirmation.current
     if (current?.order?.id) {
-      const id = current.order.id.toString().split('/').pop()
-      setOrderId(id ?? null)
+      setOrderId(current.order.id.toString().split('/').pop() ?? null)
       return
     }
 
     const unsubscribe = orderConfirmation.subscribe((value: any) => {
       if (value?.order?.id) {
-        const id = value.order.id.toString().split('/').pop()
-        setOrderId(id ?? null)
+        setOrderId(value.order.id.toString().split('/').pop() ?? null)
       }
     })
 
@@ -105,7 +120,6 @@ function App() {
     tryFetch()
   }, [orderId, shopDomain])
 
-  // Hide if timer runs out
   if (countdown === '0:00') return null
   if (checked) return null
   if (!opportunity) return null
@@ -113,14 +127,36 @@ function App() {
   // Success state
   if (accepted) {
     return (
-      <BlockStack spacing="tight">
+      <BlockStack spacing="none">
         <Divider />
         <View padding="base">
-          <BlockStack spacing="tight">
-            <Heading level={3}>✓ Added to your order!</Heading>
-            <Text size="small" appearance="subdued">
-              Your item will be shipped separately to your address.
-            </Text>
+          <BlockStack spacing="base">
+            <InlineLayout columns={['auto', 'fill']} spacing="base">
+              <View>
+                <Text size="large" emphasis="bold">✓</Text>
+              </View>
+              <BlockStack spacing="extraTight">
+                <Text size="medium" emphasis="bold">Added to your order!</Text>
+                <Text size="small" appearance="subdued">
+                  Your item is confirmed and will be delivered separately.
+                </Text>
+              </BlockStack>
+            </InlineLayout>
+            <View
+              padding="base"
+              border="base"
+              borderRadius="base"
+              background="secondary"
+            >
+              <BlockStack spacing="extraTight">
+                <Text size="small" appearance="subdued">Estimated delivery</Text>
+                <Text size="medium" emphasis="bold">{deliveryDate}</Text>
+                <Text size="extraSmall" appearance="subdued">
+                  Cash on Delivery · Shipped separately
+                </Text>
+              </BlockStack>
+            </View>
+            <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
           </BlockStack>
         </View>
       </BlockStack>
@@ -132,43 +168,66 @@ function App() {
   return (
     <BlockStack spacing="none">
       <Divider />
-      <View
-        padding="base"
-        border="base"
-        borderRadius="base"
-        background="secondary"
-      >
+      <View padding="base">
         <BlockStack spacing="base">
 
-          {/* Header with urgency */}
-          <InlineLayout
-            columns={['fill', 'auto']}
-            spacing="base"
-          >
-            <Heading level={3}>{opportunity.headline}</Heading>
-            <Text size="small" appearance="critical" emphasis="bold">
-              ⏱ {countdown}
+          {/* Header: label + countdown */}
+          <InlineLayout columns={['fill', 'auto']} spacing="base">
+            <Text size="small" appearance="subdued" emphasis="bold">
+              Recommended for you
+            </Text>
+            <Text size="extraSmall" appearance="subdued">
+              Offer expires in {countdown}
             </Text>
           </InlineLayout>
 
-          {/* Image + details */}
-<InlineLayout columns={[120, 'fill']} spacing="base">
-  <Image
-    source={opportunity.visualAssetUrl}
-    accessibilityDescription="Product image"
-  />
-  <BlockStack spacing="tight">
-    <Text size="large" emphasis="bold">
-      {opportunity.valueProposition}
-    </Text>
-    <Text size="small">{opportunity.description}</Text>
-    <Text size="extraSmall" appearance="subdued">
-      🚚 Ships separately to your address
-    </Text>
-  </BlockStack>
-</InlineLayout>
+          {/* Image + content */}
+          <InlineLayout columns={[120, 'fill']} spacing="base">
+            <Image
+              source={opportunity.visualAssetUrl}
+              accessibilityDescription="Product image"
+            />
+            <BlockStack spacing="tight">
+              <Text size="medium" emphasis="bold">
+                {opportunity.headline}
+              </Text>
+              <Text size="small" appearance="subdued">
+                {opportunity.description}
+              </Text>
+              <Text size="large" emphasis="bold">
+                {opportunity.valueProposition}
+              </Text>
+            </BlockStack>
+          </InlineLayout>
 
-          {/* CTA buttons */}
+          {/* Value bullets */}
+          {opportunity.valueBullets && opportunity.valueBullets.length > 0 && (
+            <BlockStack spacing="extraTight">
+              {opportunity.valueBullets.map((bullet, i) => (
+                <Text key={i} size="small" appearance="subdued">
+                  ✓ {bullet}
+                </Text>
+              ))}
+            </BlockStack>
+          )}
+
+          {/* Social proof */}
+          {(opportunity.trustRating || opportunity.socialProof) && (
+            <InlineLayout columns={['auto', 'fill']} spacing="tight">
+              {opportunity.trustRating && (
+                <Text size="small" emphasis="bold">
+                  {'★'.repeat(Math.floor(opportunity.trustRating))} {opportunity.trustRating}
+                </Text>
+              )}
+              {opportunity.socialProof && (
+                <Text size="small" appearance="subdued">
+                  {opportunity.socialProof}
+                </Text>
+              )}
+            </InlineLayout>
+          )}
+
+          {/* CTAs */}
           <BlockStack spacing="tight">
             <Button
               loading={accepting}
@@ -208,7 +267,7 @@ function App() {
             </Button>
           </BlockStack>
 
-          {/* Footer */}
+          {/* Powered by Kablet */}
           <Text size="extraSmall" appearance="subdued">
             Powered by Kablet
           </Text>

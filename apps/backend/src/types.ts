@@ -61,6 +61,9 @@ export interface OpportunityDefinition {
   value_proposition: string
   visual_asset_url: string
   cta_label: string
+  value_bullets: string[]
+  social_proof: string | null
+  trust_rating: number | null
   created_at: string
 }
 

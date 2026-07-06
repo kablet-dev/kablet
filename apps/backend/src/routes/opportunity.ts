@@ -61,10 +61,10 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
     }
 
     const { data: definition } = await db
-      .from('opportunity_definitions')
-      .select('headline, description, value_proposition, visual_asset_url, cta_label')
-      .eq('id', decision.selected_definition_id!)
-      .single()
+  .from('opportunity_definitions')
+  .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
+  .eq('id', decision.selected_definition_id!)
+  .single()
 
     if (!definition) return reply.send({ opportunity: null })
 
@@ -79,15 +79,18 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
     fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
 
     return reply.send({
-      opportunity: {
-        instanceId: instance.id,
-        headline: definition.headline,
-        description: definition.description,
-        valueProposition: definition.value_proposition,
-        visualAssetUrl: definition.visual_asset_url,
-        ctaLabel: definition.cta_label,
-      }
-    })
+  opportunity: {
+    instanceId: instance.id,
+    headline: definition.headline,
+    description: definition.description,
+    valueProposition: definition.value_proposition,
+    visualAssetUrl: definition.visual_asset_url,
+    ctaLabel: definition.cta_label,
+    valueBullets: definition.value_bullets ?? [],
+    socialProof: definition.social_proof ?? null,
+    trustRating: definition.trust_rating ?? null,
+  }
+})
   })
 
   // ── POST /opportunity/response ───────────────────────────────────────
