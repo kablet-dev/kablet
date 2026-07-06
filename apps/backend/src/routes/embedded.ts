@@ -182,6 +182,12 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     <button class="tab" onclick="showTab('settings')">Settings</button>
   </div>
 
+  <!-- Payout setup banner -->
+  <div id="payout-banner" style="display:none; background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:14px; color:#92400e; align-items:center; justify-content:space-between; gap:12px;">
+    <span>⚠️ To receive your weekly payouts, please add your bank details in <strong>Settings</strong>.</span>
+    <button onclick="showTab('settings')" style="background:#f59e0b; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">Add Bank Details</button>
+  </div>
+
   <!-- OVERVIEW TAB -->
   <div id="tab-overview" class="tab-content active">
     <div class="header">
@@ -490,29 +496,44 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       kabletEnabled = newStatus;
       updateStatusUI();
     }
+async function checkPayoutSetup() {
+  const token = await getToken()
+  const res = await fetch(API + '/payouts/settings', {
+    headers: { Authorization: 'Bearer ' + token }
+  })
+  const data = await res.json()
+  const hasDetails = data.settings?.iban && data.settings?.bank_name
+  const banner = document.getElementById('payout-banner')
+  if (banner) {
+    banner.style.display = hasDetails ? 'none' : 'flex'
+  }
+}
 
     async function saveSettings() {
-      const btn = document.getElementById('save-settings-btn');
-      btn.disabled = true;
-      btn.textContent = 'Saving...';
-      const token = await getToken();
-      await fetch(API + '/payouts/settings', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: document.getElementById('full_name').value,
-          account_holder_name: document.getElementById('account_holder_name').value,
-          bank_name: document.getElementById('bank_name').value,
-          iban: document.getElementById('iban').value,
-        })
-      });
-      btn.disabled = false;
-      btn.textContent = 'Save Bank Details';
-      const msg = document.getElementById('settings-success');
-      msg.style.display = 'block';
-      setTimeout(() => msg.style.display = 'none', 3000);
-    }
+  const btn = document.getElementById('save-settings-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  const token = await getToken();
+  await fetch(API + '/payouts/settings', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      full_name: document.getElementById('full_name').value,
+      account_holder_name: document.getElementById('account_holder_name').value,
+      bank_name: document.getElementById('bank_name').value,
+      iban: document.getElementById('iban').value,
+    })
+  });
+  btn.disabled = false;
+  btn.textContent = 'Save Bank Details';
+  // Hide the banner after successful save
+  document.getElementById('payout-banner').style.display = 'none';
+  const msg = document.getElementById('settings-success');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 3000);
+}
 
+    checkPayoutSetup()
     loadOverview();
   </script>
 </body>
