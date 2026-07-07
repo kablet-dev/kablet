@@ -178,48 +178,99 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
 
 <!-- Onboarding state -->
   <div id="onboarding-state" style="display:none;">
-    <div style="max-width:520px; margin:0 auto; padding:24px 0;">
-      <div style="margin-bottom:28px;">
-        <span style="font-size:20px; font-weight:700; color:#111;">Kablet<span style="color:#673de6;">.</span></span>
-      </div>
-      <h1 style="font-size:22px; font-weight:700; color:#111; margin-bottom:8px; line-height:1.3;">
-        Start earning additional revenue from every completed order.
-      </h1>
-      <p style="font-size:14px; color:#666; margin-bottom:28px; line-height:1.6;">
-        Complete one final step to activate Kablet. It takes less than a minute.
-      </p>
-      <div style="margin-bottom:24px;">
-        <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;">
-          <div style="width:28px; height:28px; border-radius:50%; background:#d1fae5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">✓</div>
-          <div>
-            <div style="font-size:14px; font-weight:600; color:#111;">App Installed</div>
-            <div style="font-size:13px; color:#888;">Your store is connected to Kablet.</div>
-          </div>
+    
+    <!-- Help Modal -->
+    <div id="help-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; align-items:center; justify-content:center; padding:24px;">
+      <div style="background:white; border-radius:12px; padding:32px; max-width:480px; width:100%; position:relative;">
+        <button onclick="closeHelpModal()" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#999;">×</button>
+        <h2 style="font-size:18px; font-weight:700; margin-bottom:8px;">Quick Setup Guide</h2>
+        <p style="font-size:14px; color:#666; margin-bottom:16px;">Watch how to activate Kablet in under 60 seconds.</p>
+        <div style="background:#f4f0fd; border-radius:8px; height:180px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; border:2px dashed #d1d5db; color:#999; font-size:13px;" id="modal-video-placeholder">
+          🎬 Setup video coming soon
         </div>
-        <div style="width:2px; height:14px; background:#e5e7eb; margin-left:13px; margin-bottom:12px;"></div>
-        <div style="display:flex; align-items:flex-start; gap:12px;">
-          <div style="width:28px; height:28px; border-radius:50%; background:#673de6; color:white; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">2</div>
-          <div>
-            <div style="font-size:14px; font-weight:600; color:#111;">Activate Kablet on your Thank You page</div>
-            <div style="font-size:13px; color:#888;">Add the Kablet block in your checkout editor. Takes 30 seconds.</div>
+        <div style="border-top:1px solid #e5e7eb; padding-top:16px;">
+          <p style="font-size:13px; color:#666; margin-bottom:12px;">Still need help? Our team is happy to assist.</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6; font-size:13px;">
+            <span>📧 Email</span>
+            <a href="mailto:support@kablet.com" style="color:#673de6; text-decoration:none; font-weight:500;">support@kablet.com</a>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; font-size:13px;">
+            <span>💬 WhatsApp</span>
+            <a href="https://wa.me/971561551029" target="_blank" style="color:#673de6; text-decoration:none; font-weight:500;">+971 56 155 1029</a>
           </div>
         </div>
       </div>
-      <div style="background:#f9fafb; border-radius:8px; padding:14px 16px; margin-bottom:20px;">
-        <div style="font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">What you'll do</div>
-        <ul style="padding-left:16px; margin:0;">
-          <li style="font-size:13px; color:#666; line-height:2;">Open the Shopify Checkout Editor</li>
-          <li style="font-size:13px; color:#666; line-height:2;">Add the Kablet Offer block</li>
-          <li style="font-size:13px; color:#666; line-height:2;">Click Save</li>
-        </ul>
+    </div>
+
+    <!-- Two column layout -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; min-height:calc(100vh - 48px); background:white; border-radius:12px; overflow:hidden; box-shadow:0 2px 12px rgba(103,61,230,0.1);">
+      
+      <!-- Left column -->
+      <div style="padding:40px 36px; display:flex; flex-direction:column; justify-content:center;">
+        <div style="margin-bottom:28px;">
+          <span style="font-size:18px; font-weight:700; color:#111;">Kablet<span style="color:#673de6;">.</span></span>
+        </div>
+        <h1 style="font-size:22px; font-weight:700; color:#111; margin-bottom:8px; line-height:1.3;">
+          Start earning additional revenue from every completed order.
+        </h1>
+        <p style="font-size:14px; color:#666; margin-bottom:28px; line-height:1.6;">
+          Complete one final step to activate Kablet. It takes less than a minute.
+        </p>
+
+        <!-- Steps -->
+        <div style="margin-bottom:24px;">
+          <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;">
+            <div style="width:26px; height:26px; border-radius:50%; background:#d1fae5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">✓</div>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:#111;">App Installed</div>
+              <div style="font-size:12px; color:#888;">Your store is connected to Kablet.</div>
+            </div>
+          </div>
+          <div style="width:2px; height:14px; background:#e5e7eb; margin-left:12px; margin-bottom:12px;"></div>
+          <div style="display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:26px; height:26px; border-radius:50%; background:#673de6; color:white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0;">2</div>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:#111;">Activate on your Thank You page</div>
+              <div style="font-size:12px; color:#888;">Add the Kablet block in your checkout editor.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div style="background:#f9fafb; border-radius:8px; padding:12px 14px; margin-bottom:20px;">
+          <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:6px;">What you'll do</div>
+          <ul style="padding-left:14px; margin:0;">
+            <li style="font-size:12px; color:#666; line-height:2;">Open the Shopify Checkout Editor</li>
+            <li style="font-size:12px; color:#666; line-height:2;">Add the Kablet Offer block</li>
+            <li style="font-size:12px; color:#666; line-height:2;">Click Save</li>
+          </ul>
+        </div>
+
+        <!-- CTAs -->
+        <button onclick="openEditor()" style="display:block; width:100%; background:#673de6; color:white; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer; margin-bottom:8px;">
+          Open Checkout Editor →
+        </button>
+        <button onclick="completeSetup()" style="display:block; width:100%; background:#101011; color:white; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600; border:none; cursor:pointer; margin-bottom:12px;">
+          I've completed setup ✓
+        </button>
+        <p style="font-size:11px; color:#999; text-align:center; margin-bottom:16px;">One-time setup · Takes less than 1 minute</p>
+        
+        <!-- Need help -->
+        <button onclick="openHelpModal()" style="display:block; width:100%; background:transparent; color:#673de6; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:500; border:1px solid #e5e7eb; cursor:pointer;">
+          Need Help?
+        </button>
       </div>
-      <button onclick="openEditor()" style="display:block; width:100%; background:#673de6; color:white; padding:13px 24px; border-radius:8px; font-size:15px; font-weight:600; border:none; cursor:pointer; margin-bottom:10px;">
-        Open Checkout Editor →
-      </button>
-      <button onclick="completeSetup()" style="display:block; width:100%; background:#101011; color:white; padding:13px 24px; border-radius:8px; font-size:15px; font-weight:600; border:none; cursor:pointer; margin-bottom:12px;">
-        I've completed setup ✓
-      </button>
-      <p style="font-size:12px; color:#999; text-align:center;">One-time setup · Takes less than 1 minute</p>
+
+      <!-- Right column -->
+      <div style="background:linear-gradient(135deg, #673de6 0%, #101011 100%); display:flex; align-items:center; justify-content:center; padding:40px; position:relative;">
+        <div style="width:100%; aspect-ratio:9/16; max-height:380px; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:13px; text-align:center; padding:24px; gap:8px;" id="right-col-media">
+          <div style="font-size:28px; opacity:0.5;">📱</div>
+          <div>Customer experience preview</div>
+          <div style="font-size:11px; margin-top:4px;">Video coming soon</div>
+        </div>
+        <div style="position:absolute; bottom:20px; left:0; right:0; text-align:center; color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">What your customers will see</div>
+      </div>
+
     </div>
   </div>
 
@@ -599,6 +650,14 @@ async function checkPayoutSetup() {
       }
     }
 
+    function openHelpModal() {
+  document.getElementById('help-modal').style.display = 'flex';
+}
+
+function closeHelpModal() {
+  document.getElementById('help-modal').style.display = 'none';
+}
+  
     function showOnboarding() {
       document.getElementById('onboarding-state').style.display = 'block';
       document.getElementById('dashboard-state').style.display = 'none';
