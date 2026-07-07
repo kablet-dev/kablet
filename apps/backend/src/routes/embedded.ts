@@ -262,14 +262,33 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       </div>
 
       <!-- Right column -->
-      <div style="background:linear-gradient(135deg, #673de6 0%, #101011 100%); display:flex; align-items:center; justify-content:center; padding:40px; position:relative;">
-        <div style="width:100%; aspect-ratio:9/16; max-height:380px; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:13px; text-align:center; padding:24px; gap:8px;" id="right-col-media">
-          <div style="font-size:28px; opacity:0.5;">📱</div>
-          <div>Customer experience preview</div>
-          <div style="font-size:11px; margin-top:4px;">Video coming soon</div>
-        </div>
-        <div style="position:absolute; bottom:20px; left:0; right:0; text-align:center; color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.05em; text-transform:uppercase;">What your customers will see</div>
-      </div>
+<div style="background:linear-gradient(135deg, #673de6 0%, #101011 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; position:relative; gap:24px;">
+  
+  <!-- Step indicator -->
+  <div style="display:flex; align-items:center; gap:0;">
+    <div id="step-indicator-1" style="width:36px; height:36px; border-radius:50%; background:white; color:#673de6; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.3s;">1</div>
+    <div style="width:60px; height:2px; background:rgba(255,255,255,0.3);"></div>
+    <div id="step-indicator-2" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.3s;">2</div>
+  </div>
+
+  <!-- Step 1 video — Setup guide -->
+  <div id="right-col-step1" style="width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px;">
+    <!-- Replace src with your setup GIF URL -->
+    <div style="font-size:28px; opacity:0.6;">🎬</div>
+    <div style="font-weight:600;">How to activate Kablet</div>
+    <div style="font-size:11px; opacity:0.6;">Setup video coming soon</div>
+  </div>
+
+  <!-- Step 2 video — Customer experience -->
+  <div id="right-col-step2" style="display:none; width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px;">
+    <!-- Replace src with your customer experience GIF URL -->
+    <div style="font-size:28px; opacity:0.6;">📱</div>
+    <div style="font-weight:600;">What your customers will see</div>
+    <div style="font-size:11px; opacity:0.6;">Customer experience video coming soon</div>
+  </div>
+
+  <div style="color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.05em; text-transform:uppercase;" id="right-col-label">Step 1 of 2 · Setup</div>
+</div>
 
     </div>
   </div>
@@ -670,6 +689,15 @@ function closeHelpModal() {
     }
 
     async function openEditor() {
+  // Switch to step 1 active state
+  document.getElementById('step-indicator-1').style.background = 'white';
+  document.getElementById('step-indicator-1').style.color = '#673de6';
+  document.getElementById('step-indicator-2').style.background = 'rgba(255,255,255,0.2)';
+  document.getElementById('step-indicator-2').style.color = 'rgba(255,255,255,0.6)';
+  document.getElementById('right-col-step1').style.display = 'flex';
+  document.getElementById('right-col-step2').style.display = 'none';
+  document.getElementById('right-col-label').textContent = 'Step 1 of 2 · Setup';
+
   const token = await getToken();
   const res = await fetch(API + '/dashboard/editor-url', {
     headers: { Authorization: 'Bearer ' + token }
@@ -678,14 +706,26 @@ function closeHelpModal() {
   window.open(data.url, '_blank');
 }
 
-    async function completeSetup() {
-      const token = await getToken();
-      await fetch(API + '/dashboard/complete-setup', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      showDashboard();
-    }
+async function completeSetup() {
+  // Switch to step 2
+  document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
+  document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.6)';
+  document.getElementById('step-indicator-2').style.background = 'white';
+  document.getElementById('step-indicator-2').style.color = '#673de6';
+  document.getElementById('right-col-step1').style.display = 'none';
+  document.getElementById('right-col-step2').style.display = 'flex';
+  document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Activated';
+
+  // Brief delay then mark setup complete and show dashboard
+  setTimeout(async () => {
+    const token = await getToken();
+    await fetch(API + '/dashboard/complete-setup', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    showDashboard();
+  }, 2000);
+}
 
     init();
   </script>
