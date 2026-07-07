@@ -176,6 +176,56 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
 </head>
 <body>
 
+<!-- Onboarding state -->
+  <div id="onboarding-state" style="display:none;">
+    <div style="max-width:520px; margin:0 auto; padding:24px 0;">
+      <div style="margin-bottom:28px;">
+        <span style="font-size:20px; font-weight:700; color:#111;">Kablet<span style="color:#673de6;">.</span></span>
+      </div>
+      <h1 style="font-size:22px; font-weight:700; color:#111; margin-bottom:8px; line-height:1.3;">
+        Start earning additional revenue from every completed order.
+      </h1>
+      <p style="font-size:14px; color:#666; margin-bottom:28px; line-height:1.6;">
+        Complete one final step to activate Kablet. It takes less than a minute.
+      </p>
+      <div style="margin-bottom:24px;">
+        <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#d1fae5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">✓</div>
+          <div>
+            <div style="font-size:14px; font-weight:600; color:#111;">App Installed</div>
+            <div style="font-size:13px; color:#888;">Your store is connected to Kablet.</div>
+          </div>
+        </div>
+        <div style="width:2px; height:14px; background:#e5e7eb; margin-left:13px; margin-bottom:12px;"></div>
+        <div style="display:flex; align-items:flex-start; gap:12px;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#673de6; color:white; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">2</div>
+          <div>
+            <div style="font-size:14px; font-weight:600; color:#111;">Activate Kablet on your Thank You page</div>
+            <div style="font-size:13px; color:#888;">Add the Kablet block in your checkout editor. Takes 30 seconds.</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#f9fafb; border-radius:8px; padding:14px 16px; margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">What you'll do</div>
+        <ul style="padding-left:16px; margin:0;">
+          <li style="font-size:13px; color:#666; line-height:2;">Open the Shopify Checkout Editor</li>
+          <li style="font-size:13px; color:#666; line-height:2;">Add the Kablet Offer block</li>
+          <li style="font-size:13px; color:#666; line-height:2;">Click Save</li>
+        </ul>
+      </div>
+      <button onclick="openEditor()" style="display:block; width:100%; background:#673de6; color:white; padding:13px 24px; border-radius:8px; font-size:15px; font-weight:600; border:none; cursor:pointer; margin-bottom:10px;">
+        Open Checkout Editor →
+      </button>
+      <button onclick="completeSetup()" style="display:block; width:100%; background:#101011; color:white; padding:13px 24px; border-radius:8px; font-size:15px; font-weight:600; border:none; cursor:pointer; margin-bottom:12px;">
+        I've completed setup ✓
+      </button>
+      <p style="font-size:12px; color:#999; text-align:center;">One-time setup · Takes less than 1 minute</p>
+    </div>
+  </div>
+
+  <!-- Dashboard state -->
+  <div id="dashboard-state" style="display:none;">
+
   <div class="tabs">
     <button class="tab active" onclick="showTab('overview')">Overview</button>
     <button class="tab" onclick="showTab('payouts')">Payouts</button>
@@ -575,6 +625,7 @@ async function checkPayoutSetup() {
 
     init();
   </script>
+  </div><!-- end dashboard-state -->
 </body>
 </html>
     `
