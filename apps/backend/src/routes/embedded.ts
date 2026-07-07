@@ -264,28 +264,32 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       <!-- Right column -->
 <div style="background:linear-gradient(135deg, #673de6 0%, #101011 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; position:relative; gap:24px;">
   
-  <!-- Step indicator -->
-  <div style="display:flex; align-items:center; gap:0;">
-    <div id="step-indicator-1" style="width:36px; height:36px; border-radius:50%; background:white; color:#673de6; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.3s;">1</div>
-    <div style="width:60px; height:2px; background:rgba(255,255,255,0.3);"></div>
-    <div id="step-indicator-2" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.3s;">2</div>
+  <!-- Step indicator with labels -->
+<div style="display:flex; align-items:flex-start; gap:0;">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+    <div id="step-indicator-1" style="width:36px; height:36px; border-radius:50%; background:white; color:#673de6; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.4s;">1</div>
+    <div id="step-label-1" style="font-size:10px; color:white; text-align:center; max-width:60px; opacity:1; transition:all 0.4s;">Setup</div>
   </div>
+  <div style="width:60px; height:2px; background:rgba(255,255,255,0.3); margin-top:18px;"></div>
+  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+    <div id="step-indicator-2" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.4s;">2</div>
+    <div id="step-label-2" style="font-size:10px; color:rgba(255,255,255,0.5); text-align:center; max-width:60px; transition:all 0.4s;">Customer<br>Experience</div>
+  </div>
+</div>
 
   <!-- Step 1 video — Setup guide -->
-  <div id="right-col-step1" style="width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px;">
-    <!-- Replace src with your setup GIF URL -->
-    <div style="font-size:28px; opacity:0.6;">🎬</div>
-    <div style="font-weight:600;">How to activate Kablet</div>
-    <div style="font-size:11px; opacity:0.6;">Setup video coming soon</div>
-  </div>
+<div id="right-col-step1" style="width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px; transition:opacity 0.4s;">
+  <div style="font-size:28px; opacity:0.6;">🎬</div>
+  <div style="font-weight:600;">How to activate Kablet</div>
+  <div style="font-size:11px; opacity:0.6;">Setup video coming soon</div>
+</div>
 
   <!-- Step 2 video — Customer experience -->
-  <div id="right-col-step2" style="display:none; width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px;">
-    <!-- Replace src with your customer experience GIF URL -->
-    <div style="font-size:28px; opacity:0.6;">📱</div>
-    <div style="font-weight:600;">What your customers will see</div>
-    <div style="font-size:11px; opacity:0.6;">Customer experience video coming soon</div>
-  </div>
+<div id="right-col-step2" style="display:none; width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px; transition:opacity 0.4s; opacity:0;">
+  <div style="font-size:28px; opacity:0.6;">📱</div>
+  <div style="font-weight:600;">What your customers will see</div>
+  <div style="font-size:11px; opacity:0.6;">Customer experience video coming soon</div>
+</div>
 
   <div style="color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.05em; text-transform:uppercase;" id="right-col-label">Step 1 of 2 · Setup</div>
 </div>
@@ -678,9 +682,10 @@ function closeHelpModal() {
 }
   
     function showOnboarding() {
-      document.getElementById('onboarding-state').style.display = 'block';
-      document.getElementById('dashboard-state').style.display = 'none';
-    }
+  document.getElementById('onboarding-state').style.display = 'block';
+  document.getElementById('dashboard-state').style.display = 'none';
+  startPreviewLoop();
+}
 
     function showDashboard() {
       document.getElementById('onboarding-state').style.display = 'none';
@@ -707,6 +712,7 @@ function closeHelpModal() {
 }
 
 async function completeSetup() {
+if (previewInterval) clearInterval(previewInterval);
   // Switch to step 2
   document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
   document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.6)';
@@ -715,6 +721,60 @@ async function completeSetup() {
   document.getElementById('right-col-step1').style.display = 'none';
   document.getElementById('right-col-step2').style.display = 'flex';
   document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Activated';
+
+  // Auto-loop between steps for the preview
+let currentPreviewStep = 1;
+let previewInterval = null;
+
+function startPreviewLoop() {
+  previewInterval = setInterval(() => {
+    if (currentPreviewStep === 1) {
+      switchToPreviewStep2();
+    } else {
+      switchToPreviewStep1();
+    }
+  }, 4000);
+}
+
+function switchToPreviewStep1() {
+  currentPreviewStep = 1;
+  // Step indicators
+  document.getElementById('step-indicator-1').style.background = 'white';
+  document.getElementById('step-indicator-1').style.color = '#673de6';
+  document.getElementById('step-label-1').style.color = 'white';
+  document.getElementById('step-label-1').style.opacity = '1';
+  document.getElementById('step-indicator-2').style.background = 'rgba(255,255,255,0.2)';
+  document.getElementById('step-indicator-2').style.color = 'rgba(255,255,255,0.5)';
+  document.getElementById('step-label-2').style.color = 'rgba(255,255,255,0.5)';
+  // Videos
+  document.getElementById('right-col-step1').style.opacity = '1';
+  document.getElementById('right-col-step1').style.display = 'flex';
+  document.getElementById('right-col-step2').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('right-col-step2').style.display = 'none';
+    document.getElementById('right-col-step1').style.opacity = '1';
+  }, 400);
+  document.getElementById('right-col-label').textContent = 'Step 1 of 2 · Setup';
+}
+
+function switchToPreviewStep2() {
+  currentPreviewStep = 2;
+  // Step indicators
+  document.getElementById('step-indicator-2').style.background = 'white';
+  document.getElementById('step-indicator-2').style.color = '#673de6';
+  document.getElementById('step-label-2').style.color = 'white';
+  document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
+  document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.5)';
+  document.getElementById('step-label-1').style.color = 'rgba(255,255,255,0.5)';
+  // Videos
+  document.getElementById('right-col-step1').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('right-col-step1').style.display = 'none';
+    document.getElementById('right-col-step2').style.display = 'flex';
+    document.getElementById('right-col-step2').style.opacity = '1';
+  }, 400);
+  document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Customer Experience';
+}
 
   // Brief delay then mark setup complete and show dashboard
   setTimeout(async () => {
