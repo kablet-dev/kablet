@@ -425,11 +425,13 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     </div>
   </div>
 
-  <script>
+ <script>
     const API = 'https://kablet-backend.onrender.com';
     let appBridgeToken = null;
     let currentPeriod = 'lifetime';
     let kabletEnabled = true;
+    let currentPreviewStep = 1;
+    let previewInterval = null;
 
     const AppBridge = window['app-bridge'];
     const createApp = AppBridge.default;
@@ -439,6 +441,105 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       apiKey: '468a9b31e9ad02a319dbc3b88d6b4039',
       host: new URLSearchParams(window.location.search).get('host'),
     });
+
+    async function getToken() {
+      if (!appBridgeToken) {
+        appBridgeToken = await getSessionToken(app);
+      }
+      return appBridgeToken;
+    }
+
+    // ── Onboarding ───────────────────────────────────────────────────
+
+    function showOnboarding() {
+      document.getElementById('onboarding-state').style.display = 'block';
+      document.getElementById('dashboard-state').style.display = 'none';
+      startPreviewLoop();
+    }
+
+    function showDashboard() {
+      document.getElementById('onboarding-state').style.display = 'none';
+      document.getElementById('dashboard-state').style.display = 'block';
+      loadOverview();
+    }
+
+    function openHelpModal() {
+      document.getElementById('help-modal').style.display = 'flex';
+    }
+
+    function closeHelpModal() {
+      document.getElementById('help-modal').style.display = 'none';
+    }
+
+    async function openEditor() {
+      const token = await getToken();
+      const res = await fetch(API + '/dashboard/editor-url', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      window.open(data.url, '_blank');
+    }
+
+    async function completeSetup() {
+      if (previewInterval) clearInterval(previewInterval);
+      const token = await getToken();
+      await fetch(API + '/dashboard/complete-setup', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      showDashboard();
+    }
+
+    // ── Preview loop ─────────────────────────────────────────────────
+
+    function startPreviewLoop() {
+      currentPreviewStep = 1;
+      switchToPreviewStep1();
+      previewInterval = setInterval(() => {
+        if (currentPreviewStep === 1) {
+          switchToPreviewStep2();
+        } else {
+          switchToPreviewStep1();
+        }
+      }, 4000);
+    }
+
+    function switchToPreviewStep1() {
+      currentPreviewStep = 1;
+      document.getElementById('step-indicator-1').style.background = 'white';
+      document.getElementById('step-indicator-1').style.color = '#673de6';
+      document.getElementById('step-label-1').style.color = 'white';
+      document.getElementById('step-label-1').style.opacity = '1';
+      document.getElementById('step-indicator-2').style.background = 'rgba(255,255,255,0.2)';
+      document.getElementById('step-indicator-2').style.color = 'rgba(255,255,255,0.5)';
+      document.getElementById('step-label-2').style.color = 'rgba(255,255,255,0.5)';
+      document.getElementById('right-col-step2').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('right-col-step2').style.display = 'none';
+        document.getElementById('right-col-step1').style.display = 'flex';
+        document.getElementById('right-col-step1').style.opacity = '1';
+      }, 400);
+      document.getElementById('right-col-label').textContent = 'Step 1 of 2 · Setup';
+    }
+
+    function switchToPreviewStep2() {
+      currentPreviewStep = 2;
+      document.getElementById('step-indicator-2').style.background = 'white';
+      document.getElementById('step-indicator-2').style.color = '#673de6';
+      document.getElementById('step-label-2').style.color = 'white';
+      document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
+      document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.5)';
+      document.getElementById('step-label-1').style.color = 'rgba(255,255,255,0.5)';
+      document.getElementById('right-col-step1').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('right-col-step1').style.display = 'none';
+        document.getElementById('right-col-step2').style.display = 'flex';
+        document.getElementById('right-col-step2').style.opacity = '1';
+      }, 400);
+      document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Customer Experience';
+    }
+
+    // ── Dashboard ────────────────────────────────────────────────────
 
     function showTab(name) {
       document.querySelectorAll('.tab').forEach((t, i) => {
@@ -457,13 +558,6 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       loadOverview();
     }
 
-    async function getToken() {
-      if (!appBridgeToken) {
-        appBridgeToken = await getSessionToken(app);
-      }
-      return appBridgeToken;
-    }
-
     function getStatusBadge(state) {
       if (!state) return '—';
       switch(state) {
@@ -479,7 +573,6 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     async function loadOverview() {
       const token = await getToken();
 
-      // Load summary
       const summaryRes = await fetch(API + '/dashboard/summary?period=' + currentPeriod, {
         headers: { Authorization: 'Bearer ' + token }
       });
@@ -491,7 +584,6 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       document.getElementById('stat-tx').textContent = summary.transactions_processed;
       document.getElementById('stat-rpo').textContent = 'AED ' + Number(summary.revenue_per_order).toFixed(2);
 
-      // Load transactions
       const txRes = await fetch(API + '/dashboard/transactions?period=' + currentPeriod, {
         headers: { Authorization: 'Bearer ' + token }
       });
@@ -512,11 +604,11 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
         const earnings = (instance?.current_state === 'COMPLETED' && instance?.outcome_value)
           ? '<span class="earnings">AED ' + Number(instance.outcome_value).toFixed(2) + '</span>'
           : '—';
-
         html += '<tr><td>' + date + '</td><td>' + value + '</td><td>' + offerName + '</td><td>' + status + '</td><td>' + earnings + '</td></tr>';
       });
       html += '</tbody></table>';
       document.getElementById('transactions').innerHTML = html;
+      checkPayoutSetup();
     }
 
     async function loadPayouts() {
@@ -531,21 +623,17 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       const payouts = data.payouts;
 
       let html = '';
-
-      // Two summary cards
       html += '<div class="payout-banner">';
       html += '<div><div class="label">Next Payout</div><div class="amount">AED ' + Number(cw.amount).toFixed(2) + '</div><div class="sub">Monday, ' + formatDate(cw.next_payout_date) + '</div></div>';
       html += '<div><div class="label">Lifetime Paid</div><div class="amount">AED ' + Number(lifetime.earnings).toFixed(2) + '</div><div class="sub">' + lifetime.transactions + ' completed offers</div></div>';
       html += '</div>';
 
-      // Current week breakdown
       html += '<div class="payout-card"><h3>This Week</h3>';
       html += '<div class="payout-row"><span class="label">Completed offers</span><span class="value">' + cw.transactions + '</span></div>';
       html += '<div class="payout-row"><span class="label">Your rate</span><span class="value">AED 8.00 per offer</span></div>';
       html += '<div class="payout-row"><span class="label">Estimated payout</span><span class="value green">AED ' + Number(cw.amount).toFixed(2) + '</span></div>';
       html += '</div>';
 
-      // Payout history
       html += '<div class="section-title">Payout History</div>';
       html += '<div class="table-wrap">';
       if (!payouts || payouts.length === 0) {
@@ -559,8 +647,8 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
         html += '</tbody></table>';
       }
       html += '</div>';
-
       document.getElementById('payouts-content').innerHTML = html;
+      checkPayoutSetup();
     }
 
     function formatDate(dateStr) {
@@ -571,7 +659,6 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     async function loadSettings() {
       const token = await getToken();
 
-      // Load payout settings
       const res = await fetch(API + '/payouts/settings', {
         headers: { Authorization: 'Bearer ' + token }
       });
@@ -583,7 +670,6 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
         document.getElementById('iban').value = data.settings.iban ?? '';
       }
 
-      // Load merchant config status
       const configRes = await fetch(API + '/dashboard/config', {
         headers: { Authorization: 'Bearer ' + token }
       });
@@ -620,172 +706,58 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       kabletEnabled = newStatus;
       updateStatusUI();
     }
-async function checkPayoutSetup() {
-  const token = await getToken()
-  const res = await fetch(API + '/payouts/settings', {
-    headers: { Authorization: 'Bearer ' + token }
-  })
-  const data = await res.json()
-  const hasDetails = data.settings?.iban && data.settings?.bank_name
-  const banner = document.getElementById('payout-banner')
-  if (banner) {
-    banner.style.display = hasDetails ? 'none' : 'flex'
-  }
-}
+
+    async function checkPayoutSetup() {
+      const token = await getToken();
+      const res = await fetch(API + '/payouts/settings', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      const hasDetails = data.settings?.iban && data.settings?.bank_name;
+      const banner = document.getElementById('payout-banner');
+      if (banner) {
+        banner.style.display = hasDetails ? 'none' : 'flex';
+      }
+    }
 
     async function saveSettings() {
-  const btn = document.getElementById('save-settings-btn');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-  const token = await getToken();
-  await fetch(API + '/payouts/settings', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      full_name: document.getElementById('full_name').value,
-      account_holder_name: document.getElementById('account_holder_name').value,
-      bank_name: document.getElementById('bank_name').value,
-      iban: document.getElementById('iban').value,
-    })
-  });
-  btn.disabled = false;
-  btn.textContent = 'Save Bank Details';
-  // Hide the banner after successful save
-  document.getElementById('payout-banner').style.display = 'none';
-  const msg = document.getElementById('settings-success');
-  msg.style.display = 'block';
-  setTimeout(() => msg.style.display = 'none', 3000);
-}
+      const btn = document.getElementById('save-settings-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      const token = await getToken();
+      await fetch(API + '/payouts/settings', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: document.getElementById('full_name').value,
+          account_holder_name: document.getElementById('account_holder_name').value,
+          bank_name: document.getElementById('bank_name').value,
+          iban: document.getElementById('iban').value,
+        })
+      });
+      btn.disabled = false;
+      btn.textContent = 'Save Bank Details';
+      document.getElementById('payout-banner').style.display = 'none';
+      const msg = document.getElementById('settings-success');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 3000);
+    }
 
-    checkPayoutSetup()
+    // ── Init ─────────────────────────────────────────────────────────
+
     async function init() {
       const token = await getToken();
-      
       const res = await fetch(API + '/dashboard/config', {
         headers: { Authorization: 'Bearer ' + token }
       });
       const data = await res.json();
-      
+
       if (!data.setup_completed) {
         showOnboarding();
       } else {
         showDashboard();
       }
     }
-
-    function openHelpModal() {
-  document.getElementById('help-modal').style.display = 'flex';
-}
-
-function closeHelpModal() {
-  document.getElementById('help-modal').style.display = 'none';
-}
-  
-    function showOnboarding() {
-  document.getElementById('onboarding-state').style.display = 'block';
-  document.getElementById('dashboard-state').style.display = 'none';
-  startPreviewLoop();
-}
-
-    function showDashboard() {
-      document.getElementById('onboarding-state').style.display = 'none';
-      document.getElementById('dashboard-state').style.display = 'block';
-      loadOverview();
-    }
-
-    async function openEditor() {
-  // Switch to step 1 active state
-  document.getElementById('step-indicator-1').style.background = 'white';
-  document.getElementById('step-indicator-1').style.color = '#673de6';
-  document.getElementById('step-indicator-2').style.background = 'rgba(255,255,255,0.2)';
-  document.getElementById('step-indicator-2').style.color = 'rgba(255,255,255,0.6)';
-  document.getElementById('right-col-step1').style.display = 'flex';
-  document.getElementById('right-col-step2').style.display = 'none';
-  document.getElementById('right-col-label').textContent = 'Step 1 of 2 · Setup';
-
-  const token = await getToken();
-  const res = await fetch(API + '/dashboard/editor-url', {
-    headers: { Authorization: 'Bearer ' + token }
-  });
-  const data = await res.json();
-  window.open(data.url, '_blank');
-}
-
-async function completeSetup() {
-if (previewInterval) clearInterval(previewInterval);
-  // Switch to step 2
-  document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
-  document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.6)';
-  document.getElementById('step-indicator-2').style.background = 'white';
-  document.getElementById('step-indicator-2').style.color = '#673de6';
-  document.getElementById('right-col-step1').style.display = 'none';
-  document.getElementById('right-col-step2').style.display = 'flex';
-  document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Activated';
-
-  // Auto-loop between steps for the preview
-let currentPreviewStep = 1;
-let previewInterval = null;
-
-function startPreviewLoop() {
-  previewInterval = setInterval(() => {
-    if (currentPreviewStep === 1) {
-      switchToPreviewStep2();
-    } else {
-      switchToPreviewStep1();
-    }
-  }, 4000);
-}
-
-function switchToPreviewStep1() {
-  currentPreviewStep = 1;
-  // Step indicators
-  document.getElementById('step-indicator-1').style.background = 'white';
-  document.getElementById('step-indicator-1').style.color = '#673de6';
-  document.getElementById('step-label-1').style.color = 'white';
-  document.getElementById('step-label-1').style.opacity = '1';
-  document.getElementById('step-indicator-2').style.background = 'rgba(255,255,255,0.2)';
-  document.getElementById('step-indicator-2').style.color = 'rgba(255,255,255,0.5)';
-  document.getElementById('step-label-2').style.color = 'rgba(255,255,255,0.5)';
-  // Videos
-  document.getElementById('right-col-step1').style.opacity = '1';
-  document.getElementById('right-col-step1').style.display = 'flex';
-  document.getElementById('right-col-step2').style.opacity = '0';
-  setTimeout(() => {
-    document.getElementById('right-col-step2').style.display = 'none';
-    document.getElementById('right-col-step1').style.opacity = '1';
-  }, 400);
-  document.getElementById('right-col-label').textContent = 'Step 1 of 2 · Setup';
-}
-
-function switchToPreviewStep2() {
-  currentPreviewStep = 2;
-  // Step indicators
-  document.getElementById('step-indicator-2').style.background = 'white';
-  document.getElementById('step-indicator-2').style.color = '#673de6';
-  document.getElementById('step-label-2').style.color = 'white';
-  document.getElementById('step-indicator-1').style.background = 'rgba(255,255,255,0.2)';
-  document.getElementById('step-indicator-1').style.color = 'rgba(255,255,255,0.5)';
-  document.getElementById('step-label-1').style.color = 'rgba(255,255,255,0.5)';
-  // Videos
-  document.getElementById('right-col-step1').style.opacity = '0';
-  setTimeout(() => {
-    document.getElementById('right-col-step1').style.display = 'none';
-    document.getElementById('right-col-step2').style.display = 'flex';
-    document.getElementById('right-col-step2').style.opacity = '1';
-  }, 400);
-  document.getElementById('right-col-label').textContent = 'Step 2 of 2 · Customer Experience';
-}
-
-  // Brief delay then mark setup complete and show dashboard
-  setTimeout(async () => {
-    const token = await getToken();
-    await fetch(API + '/dashboard/complete-setup', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    showDashboard();
-  }, 2000);
-}
 
     init();
   </script>
