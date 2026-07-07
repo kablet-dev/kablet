@@ -534,7 +534,46 @@ async function checkPayoutSetup() {
 }
 
     checkPayoutSetup()
-    loadOverview();
+    async function init() {
+      const token = await getToken();
+      
+      const res = await fetch(API + '/dashboard/config', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const data = await res.json();
+      
+      if (!data.setup_completed) {
+        showOnboarding();
+      } else {
+        showDashboard();
+      }
+    }
+
+    function showOnboarding() {
+      document.getElementById('onboarding-state').style.display = 'block';
+      document.getElementById('dashboard-state').style.display = 'none';
+    }
+
+    function showDashboard() {
+      document.getElementById('onboarding-state').style.display = 'none';
+      document.getElementById('dashboard-state').style.display = 'block';
+      loadOverview();
+    }
+
+    async function openEditor() {
+      window.open('https://${shop}/admin/settings/checkout', '_blank');
+    }
+
+    async function completeSetup() {
+      const token = await getToken();
+      await fetch(API + '/dashboard/complete-setup', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      showDashboard();
+    }
+
+    init();
   </script>
 </body>
 </html>

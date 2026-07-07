@@ -226,11 +226,24 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
 fastify.get('/dashboard/config', async (request, reply) => {
   const { data } = await db
     .from('merchant_configs')
-    .select('offers_enabled, engine_enabled')
+    .select('offers_enabled, engine_enabled, setup_completed')
     .eq('merchant_id', request.merchantId!)
     .single()
 
-  return reply.send(data ?? { offers_enabled: true, engine_enabled: true })
+  return reply.send(data ?? { offers_enabled: true, engine_enabled: true, setup_completed: false })
+})
+
+// ── POST /dashboard/complete-setup ──────────────────────────────────
+fastify.post('/dashboard/complete-setup', async (request, reply) => {
+  const { data, error } = await db
+    .from('merchant_configs')
+    .update({ setup_completed: true })
+    .eq('merchant_id', request.merchantId!)
+    .select()
+    .single()
+
+  if (error) return reply.status(500).send({ error: error.message })
+  return reply.send({ ok: true })
 })
 
 // ── PATCH /dashboard/config ──────────────────────────────────────────
