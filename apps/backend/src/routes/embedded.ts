@@ -670,8 +670,13 @@ function closeHelpModal() {
     }
 
     async function openEditor() {
-      window.open('https://${shop}/admin/settings/checkout', '_blank');
-    }
+  const token = await getToken();
+  const res = await fetch(API + '/dashboard/editor-url', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const data = await res.json();
+  window.open(data.url, '_blank');
+}
 
     async function completeSetup() {
       const token = await getToken();

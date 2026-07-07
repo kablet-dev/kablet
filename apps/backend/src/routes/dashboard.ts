@@ -222,6 +222,44 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     })
   })
 
+  // ── GET /dashboard/editor-url ────────────────────────────────────────
+fastify.get('/dashboard/editor-url', async (request, reply) => {
+  const { data: merchant } = await db
+    .from('merchants')
+    .select('shopify_shop_domain, shopify_access_token')
+    .eq('id', request.merchantId!)
+    .single()
+
+  if (!merchant) return reply.status(404).send({ error: 'Merchant not found' })
+
+  try {
+    const profileResponse = await fetch(
+      `https://${merchant.shopify_shop_domain}/admin/api/2026-07/graphql.json`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': merchant.shopify_access_token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `{ checkoutProfiles(first: 1) { edges { node { id } } } }`
+        })
+      }
+    )
+    const profileData = await profileResponse.json() as any
+    const profileGid = profileData?.data?.checkoutProfiles?.edges?.[0]?.node?.id
+    const profileId = profileGid?.split('/').pop() ?? ''
+
+    const url = profileId
+      ? `https://${merchant.shopify_shop_domain}/admin/settings/checkout/editor/profiles/${profileId}?page=thank-you`
+      : `https://${merchant.shopify_shop_domain}/admin/settings/checkout`
+
+    return reply.send({ url })
+  } catch {
+    return reply.send({ url: `https://${merchant.shopify_shop_domain}/admin/settings/checkout` })
+  }
+})
+
   // ── GET /dashboard/config ────────────────────────────────────────────
 fastify.get('/dashboard/config', async (request, reply) => {
   const { data } = await db
