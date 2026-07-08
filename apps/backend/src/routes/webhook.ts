@@ -12,6 +12,26 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Missing required headers' })
     }
 
+    const rawBody = (request as any).rawBody as Buffer
+
+    // Verify HMAC using app client secret first (works for all shops)
+    const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
+    const isValidAppSecret = verifyShopifyHmac(rawBody, hmacHeader, appSecret)
+
+    if (!isValidAppSecret) {
+      // Try merchant-specific secret as fallback
+      const { data: merchantForHmac } = await db
+        .from('merchants')
+        .select('shopify_webhook_secret')
+        .eq('shopify_shop_domain', shopDomain)
+        .single()
+
+      if (!merchantForHmac || !verifyShopifyHmac(rawBody, hmacHeader, merchantForHmac.shopify_webhook_secret)) {
+        fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
+        return reply.status(401).send({ error: 'Invalid signature' })
+      }
+    }
+
     // Look up merchant by shop domain
     const { data: merchant } = await db
       .from('merchants')
@@ -21,13 +41,6 @@ export async function webhookRoutes(fastify: FastifyInstance) {
 
     if (!merchant) {
       return reply.status(200).send()
-    }
-
-    // Verify HMAC signature
-    const rawBody = (request as any).rawBody as Buffer
-    if (!verifyShopifyHmac(rawBody, hmacHeader, merchant.shopify_webhook_secret)) {
-      fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
-      return reply.status(401).send({ error: 'Invalid signature' })
     }
 
     // Check merchant config
