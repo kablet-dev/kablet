@@ -105,16 +105,16 @@ function App() {
           if (data.opportunity) {
             setOpportunity(data.opportunity)
             return
-          } else if (attempts < 6) {
-            setTimeout(tryFetch, 2000)
-          } else {
-            setChecked(true)
-          }
+          } else if (attempts < 10) {
+  setTimeout(tryFetch, 1000)
+} else {
+  setChecked(true)
+}
         })
         .catch(() => {
-          if (attempts < 6) setTimeout(tryFetch, 2000)
-          else setChecked(true)
-        })
+  if (attempts < 10) setTimeout(tryFetch, 1000)
+  else setChecked(true)
+})
     }
 
     tryFetch()
