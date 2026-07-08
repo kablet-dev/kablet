@@ -76,11 +76,20 @@ server.get('/auth/callback', async (request, reply) => {
   server.log.info({ shop }, 'OAuth completed')
 
   const shopResponse = await fetch(
-    `https://${shop}/admin/api/2026-07/shop.json`,
-    { headers: { 'X-Shopify-Access-Token': accessToken } }
-  )
-  const shopData = await shopResponse.json() as any
-  const shopName = shopData?.shop?.name ?? shop
+  `https://${shop}/admin/api/2026-07/graphql.json`,
+  {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: `{ shop { name } }`
+    })
+  }
+)
+const shopData = await shopResponse.json() as any
+const shopName = shopData?.data?.shop?.name ?? shop
 
   const { data: existingMerchant } = await db
     .from('merchants')
