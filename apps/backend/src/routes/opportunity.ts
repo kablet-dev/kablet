@@ -5,7 +5,7 @@ import { fetchShopifyOrder } from '../shopify.js'
 export async function opportunityRoutes(fastify: FastifyInstance) {
 
   // ── GET /opportunity/decision ────────────────────────────────────────
- fastify.get('/opportunity/decision', async (request, reply) => {
+fastify.get('/opportunity/decision', async (request, reply) => {
   const { shopifyOrderId, shopDomain } = request.query as {
     shopifyOrderId?: string
     shopDomain?: string
@@ -15,54 +15,61 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
     return reply.send({ opportunity: null })
   }
 
-  // Single optimized query — find everything in one go
-  const { data: event } = await db
-    .from('transaction_events')
-    .select(`
-      id,
-      merchants!inner (
-        id,
-        merchant_configs!inner (
-          offers_enabled
-        )
-      ),
-      decision_records (
-        outcome_type,
-        selected_definition_id,
-        opportunity_instances (
-          id,
-          current_state
-        )
-      )
-    `)
-    .eq('shopify_order_id', shopifyOrderId)
-    .eq('merchants.shopify_shop_domain', shopDomain)
-    .maybeSingle()
+  // Run merchant lookup and transaction lookup in parallel
+  const [merchantResult, eventResult] = await Promise.all([
+    db.from('merchants')
+      .select('id')
+      .eq('shopify_shop_domain', shopDomain)
+      .single(),
+    db.from('transaction_events')
+      .select('id')
+      .eq('shopify_order_id', shopifyOrderId)
+      .maybeSingle()
+  ])
 
-  if (!event) return reply.send({ opportunity: null })
+  const merchant = merchantResult.data
+  const event = eventResult.data
 
-  // Check offers enabled
-  const config = (event.merchants as any)?.merchant_configs?.[0]
+  if (!merchant || !event) return reply.send({ opportunity: null })
+
+  // Run config, decision in parallel
+  const [configResult, decisionResult] = await Promise.all([
+    db.from('merchant_configs')
+      .select('offers_enabled')
+      .eq('merchant_id', merchant.id)
+      .single(),
+    db.from('decision_records')
+      .select('outcome_type, selected_definition_id')
+      .eq('transaction_event_id', event.id)
+      .single()
+  ])
+
+  const config = configResult.data
+  const decision = decisionResult.data
+
   if (!config?.offers_enabled) return reply.send({ opportunity: null })
-
-  // Check decision
-  const decision = (event.decision_records as any)?.[0]
   if (!decision || decision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
     return reply.send({ opportunity: null })
   }
 
-  // Check instance
-  const instance = decision.opportunity_instances?.[0]
+  // Run instance and definition in parallel
+  const [instanceResult, definitionResult] = await Promise.all([
+    db.from('opportunity_instances')
+      .select('id, current_state')
+      .eq('transaction_event_id', event.id)
+      .single(),
+    db.from('opportunity_definitions')
+      .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
+      .eq('id', decision.selected_definition_id!)
+      .single()
+  ])
+
+  const instance = instanceResult.data
+  const definition = definitionResult.data
+
   if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
     return reply.send({ opportunity: null })
   }
-
-  // Fetch definition
-  const { data: definition } = await db
-    .from('opportunity_definitions')
-    .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
-    .eq('id', decision.selected_definition_id)
-    .single()
 
   if (!definition) return reply.send({ opportunity: null })
 
