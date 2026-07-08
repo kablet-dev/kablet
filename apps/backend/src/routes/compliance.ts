@@ -1,74 +1,89 @@
 import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
+import { verifyShopifyHmac } from '../shopify.js'
+
+function verifyCompliance(request: any, reply: any): boolean {
+  const hmacHeader = request.headers['x-shopify-hmac-sha256'] as string | undefined
+  const rawBody = request.rawBody as Buffer
+  const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
+
+  if (!hmacHeader || !rawBody) {
+    reply.status(401).send({ error: 'Missing HMAC header' })
+    return false
+  }
+
+  if (!verifyShopifyHmac(rawBody, hmacHeader, appSecret)) {
+    reply.status(401).send({ error: 'Invalid signature' })
+    return false
+  }
+
+  return true
+}
 
 export async function complianceRoutes(fastify: FastifyInstance) {
 
-  // Customer data request — respond with what data we hold
   fastify.post('/webhooks/customers/data_request', async (request, reply) => {
+    if (!verifyCompliance(request, reply)) return
+
     const payload = request.body as any
     fastify.log.info({
       shop: payload.shop_domain,
       customerId: payload.customer?.id,
     }, 'Customer data request received')
 
-    // We store: customer_reference, customer_name, customer_email, 
-    // customer_phone, shipping_address in opportunity_instances
-    // Respond 200 to acknowledge — manual process for now
     return reply.status(200).send()
   })
 
-  // App uninstalled — disable merchant
-fastify.post('/webhooks/app/uninstalled', async (request, reply) => {
-  const payload = request.body as any
-  const shopDomain = payload.domain
+  fastify.post('/webhooks/app/uninstalled', async (request, reply) => {
+    if (!verifyCompliance(request, reply)) return
 
-  fastify.log.info({ shopDomain }, 'App uninstalled')
+    const payload = request.body as any
+    const shopDomain = payload.domain
 
-  if (shopDomain) {
-    // Disable merchant config when app is uninstalled
-    const { data: merchant } = await db
-      .from('merchants')
-      .select('id')
-      .eq('shopify_shop_domain', shopDomain)
-      .single()
+    fastify.log.info({ shopDomain }, 'App uninstalled')
 
-    if (merchant) {
-      await db
-        .from('merchant_configs')
-        .update({
-          engine_enabled: false,
-          offers_enabled: false,
-          shopify_enabled: false,
-        })
-        .eq('merchant_id', merchant.id)
+    if (shopDomain) {
+      const { data: merchant } = await db
+        .from('merchants')
+        .select('id')
+        .eq('shopify_shop_domain', shopDomain)
+        .single()
+
+      if (merchant) {
+        await db
+          .from('merchant_configs')
+          .update({
+            engine_enabled: false,
+            offers_enabled: false,
+            shopify_enabled: false,
+          })
+          .eq('merchant_id', merchant.id)
+      }
     }
-  }
 
-  return reply.status(200).send()
-})
+    return reply.status(200).send()
+  })
 
-  // Customer redact — delete customer data
   fastify.post('/webhooks/customers/redact', async (request, reply) => {
+    if (!verifyCompliance(request, reply)) return
+
     const payload = request.body as any
     fastify.log.info({
       shop: payload.shop_domain,
       customerId: payload.customer?.id,
     }, 'Customer redact request received')
 
-    // For MVP: log and acknowledge
-    // TODO: implement actual data deletion from opportunity_instances
     return reply.status(200).send()
   })
 
-  // Shop redact — delete all merchant data after uninstall
   fastify.post('/webhooks/shop/redact', async (request, reply) => {
+    if (!verifyCompliance(request, reply)) return
+
     const payload = request.body as any
     fastify.log.info({
       shop: payload.shop_domain,
     }, 'Shop redact request received')
 
-    // For MVP: log and acknowledge
-    // TODO: implement merchant data cleanup
     return reply.status(200).send()
   })
 }
