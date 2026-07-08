@@ -16,7 +16,7 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kablet</title>
-  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-api-key="468a9b31e9ad02a319dbc3b88d6b4039"></script>
+  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -433,8 +433,14 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     let currentPreviewStep = 1;
     let previewInterval = null;
 
-    const { getSessionToken } = window['shopify'].utilities;
-const app = window['shopify'];
+    const AppBridge = window['app-bridge'];
+const createApp = AppBridge.default;
+const { getSessionToken } = AppBridge.utilities;
+
+const app = createApp({
+  apiKey: '468a9b31e9ad02a319dbc3b88d6b4039',
+  host: new URLSearchParams(window.location.search).get('host'),
+});
 
     async function getToken() {
       if (!appBridgeToken) {
