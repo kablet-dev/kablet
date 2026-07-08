@@ -14,22 +14,11 @@ export async function webhookRoutes(fastify: FastifyInstance) {
 
     const rawBody = (request as any).rawBody as Buffer
 
-    // Verify HMAC using app client secret first (works for all shops)
+    // Verify HMAC using app client secret FIRST — before any DB lookups
     const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
-    const isValidAppSecret = verifyShopifyHmac(rawBody, hmacHeader, appSecret)
-
-    if (!isValidAppSecret) {
-      // Try merchant-specific secret as fallback
-      const { data: merchantForHmac } = await db
-        .from('merchants')
-        .select('shopify_webhook_secret')
-        .eq('shopify_shop_domain', shopDomain)
-        .single()
-
-      if (!merchantForHmac || !verifyShopifyHmac(rawBody, hmacHeader, merchantForHmac.shopify_webhook_secret)) {
-        fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
-        return reply.status(401).send({ error: 'Invalid signature' })
-      }
+    if (!verifyShopifyHmac(rawBody, hmacHeader, appSecret)) {
+      fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
+      return reply.status(401).send({ error: 'Invalid signature' })
     }
 
     // Look up merchant by shop domain
@@ -54,21 +43,21 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       return reply.status(200).send()
     }
 
-  const order = request.body as any
-const webhookId = request.headers['x-shopify-webhook-id'] as string | undefined
+    const order = request.body as any
+    const webhookId = request.headers['x-shopify-webhook-id'] as string | undefined
 
-// Deduplicate by webhook ID first, then by order ID
-const { data: existing } = await db
-  .from('transaction_events')
-  .select('id')
-  .eq('merchant_id', merchant.id)
-  .eq('shopify_order_id', order.id.toString())
-  .maybeSingle()
+    // Deduplicate
+    const { data: existing } = await db
+      .from('transaction_events')
+      .select('id')
+      .eq('merchant_id', merchant.id)
+      .eq('shopify_order_id', order.id.toString())
+      .maybeSingle()
 
-if (existing) {
-  fastify.log.info({ orderId: order.id, webhookId }, 'Duplicate webhook ignored')
-  return reply.status(200).send()
-}
+    if (existing) {
+      fastify.log.info({ orderId: order.id, webhookId }, 'Duplicate webhook ignored')
+      return reply.status(200).send()
+    }
 
     // Create transaction event
     const eventData = translateShopifyOrder(order, merchant)
