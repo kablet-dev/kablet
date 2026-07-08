@@ -76,11 +76,12 @@ fastify.get('/opportunity/decision', async (request, reply) => {
   // Update to PRESENTED
   // Update to PRESENTED in background — don't await
 if (instance.current_state === 'SELECTED') {
-  db.from('opportunity_instances')
-    .update({ current_state: 'PRESENTED' })
-    .eq('id', instance.id)
-    .then(() => {})
-    .catch(() => {})
+  ;(async () => {
+    await db
+      .from('opportunity_instances')
+      .update({ current_state: 'PRESENTED' })
+      .eq('id', instance.id)
+  })()
 }
 
   fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
