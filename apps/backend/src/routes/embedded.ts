@@ -185,9 +185,9 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
         <button onclick="closeHelpModal()" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#999;">×</button>
         <h2 style="font-size:18px; font-weight:700; margin-bottom:8px;">Quick Setup Guide</h2>
         <p style="font-size:14px; color:#666; margin-bottom:16px;">Watch how to activate Kablet in under 60 seconds.</p>
-        <div style="background:#f4f0fd; border-radius:8px; height:180px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; border:2px dashed #d1d5db; color:#999; font-size:13px;" id="modal-video-placeholder">
-          🎬 Setup video coming soon
-        </div>
+        <video autoplay muted loop playsinline style="width:100%; border-radius:8px; margin-bottom:20px; max-height:200px; object-fit:cover;">
+  <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510042/Installation-demo-vid_zbzram.mov" type="video/mp4">
+</video>
         <div style="border-top:1px solid #e5e7eb; padding-top:16px;">
           <p style="font-size:13px; color:#666; margin-bottom:12px;">Still need help? Our team is happy to assist.</p>
           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6; font-size:13px;">
@@ -264,31 +264,31 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
       <!-- Right column -->
 <div style="background:linear-gradient(135deg, #673de6 0%, #101011 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; position:relative; gap:24px;">
   
-  <!-- Step indicator with labels -->
+  <!-- Manual step switcher -->
 <div style="display:flex; align-items:flex-start; gap:0;">
-  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" onclick="switchToPreviewStep1()">
     <div id="step-indicator-1" style="width:36px; height:36px; border-radius:50%; background:white; color:#673de6; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.4s;">1</div>
     <div id="step-label-1" style="font-size:10px; color:white; text-align:center; max-width:60px; opacity:1; transition:all 0.4s;">Setup</div>
   </div>
   <div style="width:60px; height:2px; background:rgba(255,255,255,0.3); margin-top:18px;"></div>
-  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" onclick="switchToPreviewStep2()">
     <div id="step-indicator-2" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; transition:all 0.4s;">2</div>
     <div id="step-label-2" style="font-size:10px; color:rgba(255,255,255,0.5); text-align:center; max-width:60px; transition:all 0.4s;">Customer<br>Experience</div>
   </div>
 </div>
 
   <!-- Step 1 video — Setup guide -->
-<div id="right-col-step1" style="width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px; transition:opacity 0.4s;">
-  <div style="font-size:28px; opacity:0.6;">🎬</div>
-  <div style="font-weight:600;">How to activate Kablet</div>
-  <div style="font-size:11px; opacity:0.6;">Setup video coming soon</div>
+<div id="right-col-step1" style="width:100%; border-radius:12px; overflow:hidden; transition:opacity 0.4s; min-height:280px;">
+  <video autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+    <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510042/Installation-demo-vid_zbzram.mov" type="video/mp4">
+  </video>
 </div>
 
   <!-- Step 2 video — Customer experience -->
-<div id="right-col-step2" style="display:none; width:100%; background:rgba(255,255,255,0.08); border-radius:12px; border:2px dashed rgba(255,255,255,0.2); flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:13px; text-align:center; padding:32px; gap:10px; min-height:280px; transition:opacity 0.4s; opacity:0;">
-  <div style="font-size:28px; opacity:0.6;">📱</div>
-  <div style="font-weight:600;">What your customers will see</div>
-  <div style="font-size:11px; opacity:0.6;">Customer experience video coming soon</div>
+<div id="right-col-step2" style="display:none; width:100%; border-radius:12px; overflow:hidden; transition:opacity 0.4s; opacity:0; min-height:280px;">
+  <video autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+    <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510006/Customer-expiernce-demo-vid_kafvjf.mov" type="video/mp4">
+  </video>
 </div>
 
   <div style="color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.05em; text-transform:uppercase;" id="right-col-label">Step 1 of 2 · Setup</div>
@@ -493,16 +493,8 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
     // ── Preview loop ─────────────────────────────────────────────────
 
     function startPreviewLoop() {
-      currentPreviewStep = 1;
-      switchToPreviewStep1();
-      previewInterval = setInterval(() => {
-        if (currentPreviewStep === 1) {
-          switchToPreviewStep2();
-        } else {
-          switchToPreviewStep1();
-        }
-      }, 4000);
-    }
+  switchToPreviewStep1();
+}
 
     function switchToPreviewStep1() {
       currentPreviewStep = 1;

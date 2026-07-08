@@ -121,8 +121,47 @@ function App() {
   }, [orderId, shopDomain])
 
   if (countdown === '0:00') return null
-  if (checked) return null
-  if (!opportunity) return null
+if (checked) return null
+
+// Show loading skeleton while waiting for opportunity
+if (!opportunity) {
+  return (
+    <View
+      padding="base"
+      border="base"
+      borderRadius="base"
+      background="primary"
+    >
+      <BlockStack spacing="base">
+        <InlineLayout columns={['fill', 'auto']} spacing="base">
+          <Text size="small" appearance="subdued" emphasis="bold">
+            Recommended for you
+          </Text>
+          <Text size="extraSmall" appearance="subdued">
+            Offer expires in {countdown}
+          </Text>
+        </InlineLayout>
+        <BlockStack spacing="tight">
+          <Text size="medium" emphasis="bold">
+            ✦ Personalizing your offer...
+          </Text>
+          <Text size="small" appearance="subdued">
+            We're finding something selected just for your order.
+          </Text>
+        </BlockStack>
+        <View
+          padding="base"
+          background="secondary"
+          borderRadius="base"
+        >
+          <Text size="small" appearance="subdued">
+            This will only take a moment.
+          </Text>
+        </View>
+      </BlockStack>
+    </View>
+  )
+}
 
   // Success state
   if (accepted) {
