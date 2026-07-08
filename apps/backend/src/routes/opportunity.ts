@@ -5,93 +5,91 @@ import { fetchShopifyOrder } from '../shopify.js'
 export async function opportunityRoutes(fastify: FastifyInstance) {
 
   // ── GET /opportunity/decision ────────────────────────────────────────
-  fastify.get('/opportunity/decision', async (request, reply) => {
-    const { shopifyOrderId, shopDomain } = request.query as {
-      shopifyOrderId?: string
-      shopDomain?: string
-    }
-
-    if (!shopifyOrderId || !shopDomain) {
-      return reply.send({ opportunity: null })
-    }
-
-    const { data: merchant } = await db
-      .from('merchants')
-      .select('id')
-      .eq('shopify_shop_domain', shopDomain)
-      .single()
-
-    if (!merchant) return reply.send({ opportunity: null })
-
-    const { data: config } = await db
-      .from('merchant_configs')
-      .select('offers_enabled')
-      .eq('merchant_id', merchant.id)
-      .single()
-
-    if (!config?.offers_enabled) return reply.send({ opportunity: null })
-
-    const { data: event } = await db
-      .from('transaction_events')
-      .select('id')
-      .eq('merchant_id', merchant.id)
-      .eq('shopify_order_id', shopifyOrderId)
-      .maybeSingle()
-
-    if (!event) return reply.send({ opportunity: null })
-
-    const { data: decision } = await db
-      .from('decision_records')
-      .select('outcome_type, selected_definition_id')
-      .eq('transaction_event_id', event.id)
-      .single()
-
-    if (!decision || decision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
-      return reply.send({ opportunity: null })
-    }
-
-    const { data: instance } = await db
-      .from('opportunity_instances')
-      .select('id, current_state')
-      .eq('transaction_event_id', event.id)
-      .single()
-
-    if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
-      return reply.send({ opportunity: null })
-    }
-
-    const { data: definition } = await db
-  .from('opportunity_definitions')
-  .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
-  .eq('id', decision.selected_definition_id!)
-  .single()
-
-    if (!definition) return reply.send({ opportunity: null })
-
-    // Update instance to PRESENTED
-    if (instance.current_state === 'SELECTED') {
-      await db
-        .from('opportunity_instances')
-        .update({ current_state: 'PRESENTED' })
-        .eq('id', instance.id)
-    }
-
-    fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
-
-    return reply.send({
-  opportunity: {
-    instanceId: instance.id,
-    headline: definition.headline,
-    description: definition.description,
-    valueProposition: definition.value_proposition,
-    visualAssetUrl: definition.visual_asset_url,
-    ctaLabel: definition.cta_label,
-    valueBullets: definition.value_bullets ?? [],
-    socialProof: definition.social_proof ?? null,
-    trustRating: definition.trust_rating ?? null,
+ fastify.get('/opportunity/decision', async (request, reply) => {
+  const { shopifyOrderId, shopDomain } = request.query as {
+    shopifyOrderId?: string
+    shopDomain?: string
   }
-})
+
+  if (!shopifyOrderId || !shopDomain || shopifyOrderId === '0') {
+    return reply.send({ opportunity: null })
+  }
+
+  // Single optimized query — find everything in one go
+  const { data: event } = await db
+    .from('transaction_events')
+    .select(`
+      id,
+      merchants!inner (
+        id,
+        merchant_configs!inner (
+          offers_enabled
+        )
+      ),
+      decision_records (
+        outcome_type,
+        selected_definition_id,
+        opportunity_instances (
+          id,
+          current_state
+        )
+      )
+    `)
+    .eq('shopify_order_id', shopifyOrderId)
+    .eq('merchants.shopify_shop_domain', shopDomain)
+    .maybeSingle()
+
+  if (!event) return reply.send({ opportunity: null })
+
+  // Check offers enabled
+  const config = (event.merchants as any)?.merchant_configs?.[0]
+  if (!config?.offers_enabled) return reply.send({ opportunity: null })
+
+  // Check decision
+  const decision = (event.decision_records as any)?.[0]
+  if (!decision || decision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
+    return reply.send({ opportunity: null })
+  }
+
+  // Check instance
+  const instance = decision.opportunity_instances?.[0]
+  if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
+    return reply.send({ opportunity: null })
+  }
+
+  // Fetch definition
+  const { data: definition } = await db
+    .from('opportunity_definitions')
+    .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
+    .eq('id', decision.selected_definition_id)
+    .single()
+
+  if (!definition) return reply.send({ opportunity: null })
+
+  // Update to PRESENTED
+  if (instance.current_state === 'SELECTED') {
+    await db
+      .from('opportunity_instances')
+      .update({ current_state: 'PRESENTED' })
+      .eq('id', instance.id)
+  }
+
+  fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
+
+  return reply.send({
+    opportunity: {
+      instanceId: instance.id,
+      headline: definition.headline,
+      description: definition.description,
+      valueProposition: definition.value_proposition,
+      visualAssetUrl: definition.visual_asset_url,
+      ctaLabel: definition.cta_label,
+      valueBullets: definition.value_bullets ?? [],
+      socialProof: definition.social_proof ?? null,
+      trustRating: definition.trust_rating ?? null,
+    }
   })
+})
 
   // ── POST /opportunity/response ───────────────────────────────────────
   fastify.post('/opportunity/response', async (request, reply) => {
