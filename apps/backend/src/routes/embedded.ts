@@ -279,14 +279,14 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
 
   <!-- Step 1 video — Setup guide -->
 <div id="right-col-step1" style="width:100%; border-radius:12px; overflow:hidden; transition:opacity 0.4s; min-height:280px;">
-  <video autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+  <video autoplay muted loop playsinline style="width:100%; height:auto; object-fit:contain; border-radius:12px;">
     <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510042/Installation-demo-vid_zbzram.mov" type="video/mp4">
   </video>
 </div>
 
   <!-- Step 2 video — Customer experience -->
 <div id="right-col-step2" style="display:none; width:100%; border-radius:12px; overflow:hidden; transition:opacity 0.4s; opacity:0; min-height:280px;">
-  <video autoplay muted loop playsinline style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+  <video autoplay muted loop playsinline style="width:100%; height:auto; object-fit:contain; border-radius:12px;">
     <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510006/Customer-expiernce-demo-vid_kafvjf.mov" type="video/mp4">
   </video>
 </div>

@@ -410,11 +410,9 @@ export async function onboardingRoutes(fastify: FastifyInstance) {
 
     <!-- RIGHT COLUMN -->
     <div class="right-col">
-      <div class="media-placeholder">
-        <div class="icon">📱</div>
-        <div>Customer experience preview</div>
-        <div style="font-size:11px; margin-top:4px;">Coming soon</div>
-      </div>
+     <video autoplay muted loop playsinline style="width:100%; border-radius:12px; object-fit:cover; max-height:400px;">
+  <source src="https://res.cloudinary.com/bc2i2xi2/video/upload/v1783510006/Customer-expiernce-demo-vid_kafvjf.mov" type="video/mp4">
+</video>
       <div class="right-label">What your customers will see</div>
     </div>
 
