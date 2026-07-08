@@ -58,18 +58,91 @@ export async function fetchShopifyOrder(
   orderId: string
 ): Promise<ShopifyOrder> {
   const response = await fetch(
-    `https://${shopDomain}/admin/api/2026-07/orders/${orderId}.json`,
+    `https://${shopDomain}/admin/api/2026-07/graphql.json`,
     {
-      headers: { 'X-Shopify-Access-Token': accessToken }
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `{
+          order(id: "gid://shopify/Order/${orderId}") {
+            id
+            email
+            shippingAddress {
+              firstName
+              lastName
+              address1
+              address2
+              city
+              province
+              country
+              countryCode
+              zip
+              phone
+            }
+            lineItems(first: 50) {
+              edges {
+                node {
+                  title
+                  quantity
+                  variant {
+                    id
+                    sku
+                    price
+                    product {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }`
+      })
     }
   )
 
   if (!response.ok) {
-    throw new Error(`Shopify API error: ${response.status} ${response.statusText}`)
+    throw new Error(`Shopify GraphQL error: ${response.status}`)
   }
 
-  const data = await response.json() as { order: ShopifyOrder }
-  return data.order
+  const data = await response.json() as any
+  const order = data?.data?.order
+
+  if (!order) throw new Error('Order not found')
+
+  // Transform GraphQL response to match our ShopifyOrder interface
+  return {
+    id: parseInt(orderId),
+    total_price: '0',
+    currency: 'AED',
+    created_at: new Date().toISOString(),
+    email: order.email,
+    shipping_address: order.shippingAddress ? {
+      first_name: order.shippingAddress.firstName,
+      last_name: order.shippingAddress.lastName,
+      address1: order.shippingAddress.address1,
+      address2: order.shippingAddress.address2,
+      city: order.shippingAddress.city,
+      province: order.shippingAddress.province,
+      country: order.shippingAddress.country,
+      country_code: order.shippingAddress.countryCode,
+      zip: order.shippingAddress.zip,
+      phone: order.shippingAddress.phone,
+    } : undefined,
+    line_items: order.lineItems?.edges?.map((edge: any) => ({
+      title: edge.node.title,
+      quantity: edge.node.quantity,
+      price: edge.node.variant?.price ?? '0',
+      sku: edge.node.variant?.sku,
+      product_id: edge.node.variant?.product?.id ? 
+        parseInt(edge.node.variant.product.id.split('/').pop()) : undefined,
+      variant_id: edge.node.variant?.id ?
+        parseInt(edge.node.variant.id.split('/').pop()) : undefined,
+    })) ?? [],
+  }
 }
 
 export async function createShopifyCodOrder(

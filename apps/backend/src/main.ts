@@ -117,28 +117,33 @@ server.get('/auth/callback', async (request, reply) => {
         shopify_enabled: true,
       })
 
-      // Register webhook automatically
-      await fetch(
-        `https://${shop}/admin/api/2026-07/webhooks.json`,
-        {
-          method: 'POST',
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            webhook: {
-              topic: 'orders/create',
-              address: `${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order`,
-              format: 'json',
-            }
-          })
+      // Register webhook automatically using GraphQL
+await fetch(
+  `https://${shop}/admin/api/2026-07/graphql.json`,
+  {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: `mutation {
+        webhookSubscriptionCreate(
+          topic: ORDERS_CREATE
+          webhookSubscription: {
+            callbackUrl: "${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order",
+            format: JSON
+          }
+        ) {
+          webhookSubscription { id }
+          userErrors { field message }
         }
-      )
+      }`
+    })
+  }
+)
 
-      server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
-    }
-  } else {
+server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
     // Update access token if merchant already exists
     await db
       .from('merchants')

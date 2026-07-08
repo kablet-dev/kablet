@@ -55,7 +55,7 @@ export async function onboardingRoutes(fastify: FastifyInstance) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kablet — Setup</title>
-  <script src="https://unpkg.com/@shopify/app-bridge@3.7.10"></script>
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
