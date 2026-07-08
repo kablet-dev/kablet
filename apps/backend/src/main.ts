@@ -107,61 +107,62 @@ server.get('/auth/callback', async (request, reply) => {
       .select('id')
       .single()
 
-    if (!error && newMerchant) {
-      // Create merchant config
-      await db.from('merchant_configs').insert({
-        merchant_id: newMerchant.id,
-        engine_enabled: true,
-        offers_enabled: true,
-        dashboard_enabled: true,
-        shopify_enabled: true,
-      })
+   if (!error && newMerchant) {
+  // Create merchant config
+  await db.from('merchant_configs').insert({
+    merchant_id: newMerchant.id,
+    engine_enabled: true,
+    offers_enabled: true,
+    dashboard_enabled: true,
+    shopify_enabled: true,
+  })
 
-      // Register webhook automatically using GraphQL
-await fetch(
-  `https://${shop}/admin/api/2026-07/graphql.json`,
-  {
-    method: 'POST',
-    headers: {
-      'X-Shopify-Access-Token': accessToken,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: `mutation {
-        webhookSubscriptionCreate(
-          topic: ORDERS_CREATE
-          webhookSubscription: {
-            callbackUrl: "${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order",
-            format: JSON
+  // Register webhook automatically using GraphQL
+  await fetch(
+    `https://${shop}/admin/api/2026-07/graphql.json`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `mutation {
+          webhookSubscriptionCreate(
+            topic: ORDERS_CREATE
+            webhookSubscription: {
+              callbackUrl: "${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order",
+              format: JSON
+            }
+          ) {
+            webhookSubscription { id }
+            userErrors { field message }
           }
-        ) {
-          webhookSubscription { id }
-          userErrors { field message }
-        }
-      }`
-    })
-  }
-)
-
-server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
-    // Update access token if merchant already exists
-    await db
-      .from('merchants')
-      .update({ shopify_access_token: accessToken })
-      .eq('shopify_shop_domain', shop)
-
-    // Re-enable merchant config in case they reinstalled after uninstalling
-    await db
-      .from('merchant_configs')
-      .update({
-        engine_enabled: true,
-        offers_enabled: true,
-        shopify_enabled: true,
+        }`
       })
-      .eq('merchant_id', existingMerchant.id)
+    }
+  )
 
-    server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
-  }
+  server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
+} else {
+  // Update access token if merchant already exists
+  await db
+    .from('merchants')
+    .update({ shopify_access_token: accessToken })
+    .eq('shopify_shop_domain', shop)
+
+  // Re-enable merchant config in case they reinstalled after uninstalling
+  await db
+    .from('merchant_configs')
+    .update({
+      engine_enabled: true,
+      offers_enabled: true,
+      shopify_enabled: true,
+    })
+    .eq('merchant_id', existingMerchant.id)
+
+  server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
+}
 
   // Redirect to app or onboarding
   const { data: merchant } = await db
