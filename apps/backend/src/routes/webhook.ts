@@ -54,20 +54,21 @@ export async function webhookRoutes(fastify: FastifyInstance) {
       return reply.status(200).send()
     }
 
-    const order = request.body as any
+  const order = request.body as any
+const webhookId = request.headers['x-shopify-webhook-id'] as string | undefined
 
-    // Deduplicate
-    const { data: existing } = await db
-      .from('transaction_events')
-      .select('id')
-      .eq('merchant_id', merchant.id)
-      .eq('shopify_order_id', order.id.toString())
-      .maybeSingle()
+// Deduplicate by webhook ID first, then by order ID
+const { data: existing } = await db
+  .from('transaction_events')
+  .select('id')
+  .eq('merchant_id', merchant.id)
+  .eq('shopify_order_id', order.id.toString())
+  .maybeSingle()
 
-    if (existing) {
-      fastify.log.info({ orderId: order.id }, 'Duplicate webhook ignored')
-      return reply.status(200).send()
-    }
+if (existing) {
+  fastify.log.info({ orderId: order.id, webhookId }, 'Duplicate webhook ignored')
+  return reply.status(200).send()
+}
 
     // Create transaction event
     const eventData = translateShopifyOrder(order, merchant)
