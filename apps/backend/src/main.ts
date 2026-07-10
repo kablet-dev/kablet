@@ -148,9 +148,11 @@ const shopName = shopData?.data?.shop?.name ?? shop
     }
   } else {
     await db
-      .from('merchants')
-      .update({ shopify_access_token: accessToken })
-      .eq('shopify_shop_domain', shop)
+  .from('merchants')
+  .update({ shopify_access_token: accessToken })
+  .eq('shopify_shop_domain', shop)
+
+server.log.info({ shop, tokenPrefix: accessToken.substring(0, 10) }, 'Token updated')
 
     await db
       .from('merchant_configs')
