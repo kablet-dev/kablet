@@ -280,6 +280,7 @@ fastify.get('/dashboard/config', async (request, reply) => {
   return reply.send(data ?? { offers_enabled: true, engine_enabled: true, setup_completed: false })
 })
 
+
 // ── POST /dashboard/complete-setup ──────────────────────────────────
 fastify.post('/dashboard/complete-setup', async (request, reply) => {
   const { data, error } = await db
@@ -291,6 +292,60 @@ fastify.post('/dashboard/complete-setup', async (request, reply) => {
 
   if (error) return reply.status(500).send({ error: error.message })
   return reply.send({ ok: true })
+})
+
+// ── POST /dashboard/complete-setup ──────────────────────────────────
+fastify.post('/dashboard/complete-setup', async (request, reply) => {
+  const { data, error } = await db
+    .from('merchant_configs')
+    .update({ setup_completed: true })
+    .eq('merchant_id', request.merchantId!)
+    .select()
+    .single()
+
+  if (error) return reply.status(500).send({ error: error.message })
+  return reply.send({ ok: true })
+})
+
+// ── POST /dashboard/register-webhook ────────────────────────────────
+fastify.post('/dashboard/register-webhook', async (request, reply) => {
+  const merchantId = request.merchantId!
+
+  const { data: merchant } = await db
+    .from('merchants')
+    .select('shopify_shop_domain, shopify_access_token')
+    .eq('id', merchantId)
+    .single()
+
+  if (!merchant) return reply.status(404).send({ error: 'Merchant not found' })
+
+  try {
+    const res = await fetch(
+      `https://${merchant.shopify_shop_domain}/admin/api/2026-07/webhooks.json`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': merchant.shopify_access_token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          webhook: {
+            topic: 'orders/create',
+            address: `${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order`,
+            format: 'json',
+          }
+        })
+      }
+    )
+
+    const data = await res.json() as any
+    fastify.log.info({ data: JSON.stringify(data), shop: merchant.shopify_shop_domain }, 'Webhook registration attempt')
+
+    return reply.send({ ok: true, data })
+  } catch (err) {
+    fastify.log.error({ err }, 'Webhook registration failed')
+    return reply.status(500).send({ error: 'Failed to register webhook' })
+  }
 })
 
 // ── PATCH /dashboard/config ──────────────────────────────────────────

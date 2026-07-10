@@ -481,14 +481,25 @@ const app = createApp({
     }
 
     async function completeSetup() {
-      if (previewInterval) clearInterval(previewInterval);
-      const token = await getToken();
-      await fetch(API + '/dashboard/complete-setup', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      showDashboard();
-    }
+  if (previewInterval) clearInterval(previewInterval);
+  const token = await getToken();
+  
+  // Register webhook for this merchant
+  try {
+    await fetch(API + '/dashboard/register-webhook', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  } catch(e) {
+    // Continue even if webhook registration fails
+  }
+
+  await fetch(API + '/dashboard/complete-setup', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  showDashboard();
+}
 
     // ── Preview loop ─────────────────────────────────────────────────
 
