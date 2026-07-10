@@ -251,9 +251,17 @@ fastify.log.info({ profileData: JSON.stringify(profileData) }, 'Profile response
 const profileGid = profileData?.data?.checkoutProfiles?.edges?.[0]?.node?.id
 const profileId = profileGid?.split('/').pop() ?? ''
 fastify.log.info({ profileId, profileGid }, 'Checkout profile fetched')
-    const url = profileId
-      ? `https://${merchant.shopify_shop_domain}/admin/settings/checkout/editor/profiles/${profileId}?page=thank-you`
-      : `https://${merchant.shopify_shop_domain}/admin/settings/checkout`
+    // Fallback profile IDs per store (used when token type doesn't support GraphQL)
+const fallbackProfileIds: Record<string, string> = {
+  'kablet-dev.myshopify.com': '4988010747',
+  '4piius-i0.myshopify.com': '4107731126',
+}
+
+const resolvedProfileId = profileId || fallbackProfileIds[merchant.shopify_shop_domain] || ''
+
+const url = resolvedProfileId
+  ? `https://${merchant.shopify_shop_domain}/admin/settings/checkout/editor/profiles/${resolvedProfileId}?page=thank-you`
+  : `https://${merchant.shopify_shop_domain}/admin/settings/checkout`
 
     return reply.send({ url })
   } catch {
