@@ -6,16 +6,20 @@ export function verifyShopifyHmac(
   hmacHeader: string,
   secret: string
 ): boolean {
-  const computed = crypto
-    .createHmac('sha256', secret)
-    .update(rawBody)
-    .digest('base64')
-
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(computed),
-      Buffer.from(hmacHeader)
-    )
+    const computed = crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('base64')
+
+    const headerBuffer = Buffer.from(hmacHeader, 'base64')
+    const computedBuffer = Buffer.from(computed, 'base64')
+
+    if (headerBuffer.length !== computedBuffer.length) {
+      return false
+    }
+
+    return crypto.timingSafeEqual(computedBuffer, headerBuffer)
   } catch {
     return false
   }
