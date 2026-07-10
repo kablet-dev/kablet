@@ -119,7 +119,24 @@ const shopName = shopData?.data?.shop?.name ?? shop
         shopify_enabled: true,
       })
 
-     
+  // Register orders/create webhook via REST API
+await fetch(
+  `https://${shop}/admin/api/2026-07/webhooks.json`,
+  {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      webhook: {
+        topic: 'orders/create',
+        address: `${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order`,
+        format: 'json',
+      }
+    })
+  }
+) 
 
 server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
     }
