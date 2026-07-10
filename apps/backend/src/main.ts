@@ -57,17 +57,23 @@ server.get('/auth/callback', async (request, reply) => {
   }
 
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: process.env.SHOPIFY_CLIENT_ID,
-      client_secret: process.env.SHOPIFY_CLIENT_SECRET,
-      code,
-    }),
-  })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    client_id: process.env.SHOPIFY_CLIENT_ID,
+    client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+    code,
+    expiring: 1,
+  }),
+})
 
   const data = await response.json() as any
-  const accessToken = data.access_token
+const accessToken = data.access_token
+const refreshToken = data.refresh_token ?? null
+const expiresIn = data.expires_in ?? null
+const expiresAt = expiresIn
+  ? new Date(Date.now() + (expiresIn - 300) * 1000).toISOString()
+  : null
 
   if (!accessToken) {
     return reply.status(400).send({ error: 'Failed to get access token' })
@@ -104,8 +110,10 @@ const shopName = shopData?.data?.shop?.name ?? shop
         name: shopName,
         shopify_shop_domain: shop,
         shopify_access_token: accessToken,
-        shopify_webhook_secret: process.env.SHOPIFY_CLIENT_SECRET ?? '',
-        geography: 'AE',
+shopify_refresh_token: refreshToken,
+shopify_token_expires_at: expiresAt,
+shopify_webhook_secret: process.env.SHOPIFY_CLIENT_SECRET ?? '',
+geography: 'AE',
       })
       .select('id')
       .single()
@@ -143,7 +151,11 @@ server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created auto
   } else {
     await db
   .from('merchants')
-  .update({ shopify_access_token: accessToken })
+  .update({ 
+    shopify_access_token: accessToken,
+    shopify_refresh_token: refreshToken,
+    shopify_token_expires_at: expiresAt,
+  })
   .eq('shopify_shop_domain', shop)
 
 server.log.info({ shop, tokenPrefix: accessToken.substring(0, 10) }, 'Token updated')

@@ -4,6 +4,8 @@ export interface Merchant {
   shopify_shop_domain: string
   shopify_access_token: string
   shopify_webhook_secret: string
+  shopify_refresh_token: string | null
+  shopify_token_expires_at: string | null
   geography: string
   created_at: string
 }
