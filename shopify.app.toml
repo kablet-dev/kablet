@@ -13,6 +13,10 @@ redirect_urls = ["https://kablet-backend.onrender.com/auth/callback"]
 api_version = "2026-07"
 
   [[webhooks.subscriptions]]
+  topics = ["orders/create"]
+  uri = "/webhook/shopify/order"
+
+  [[webhooks.subscriptions]]
   compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
   uri = "https://kablet-backend.onrender.com/webhooks/customers/data_request"
 

@@ -119,36 +119,7 @@ const shopName = shopData?.data?.shop?.name ?? shop
         shopify_enabled: true,
       })
 
-     const webhookResponse = await fetch(
-  `https://${shop}/admin/api/2026-07/graphql.json`,
-  {
-    method: 'POST',
-    headers: {
-      'X-Shopify-Access-Token': accessToken,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: `mutation {
-        webhookSubscriptionCreate(
-          topic: ORDERS_CREATE
-          webhookSubscription: {
-            callbackUrl: "${process.env.RENDER_EXTERNAL_URL}/webhook/shopify/order",
-            format: JSON
-          }
-        ) {
-          webhookSubscription { id }
-          userErrors { field message }
-        }
-      }`
-    })
-  }
-)
-
-const webhookData = await webhookResponse.json() as any
-server.log.info({ 
-  webhookResult: JSON.stringify(webhookData),
-  shop 
-}, 'Webhook registration result')
+     
 
 server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
     }
