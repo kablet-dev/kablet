@@ -250,6 +250,8 @@ fastify.get('/dashboard/editor-url', async (request, reply) => {
     const profileGid = profileData?.data?.checkoutProfiles?.edges?.[0]?.node?.id
     const profileId = profileGid?.split('/').pop() ?? ''
 
+    fastify.log.info({ profileId, profileGid }, 'Checkout profile fetched')
+
     const url = profileId
       ? `https://${merchant.shopify_shop_domain}/admin/settings/checkout/editor/profiles/${profileId}?page=thank-you`
       : `https://${merchant.shopify_shop_domain}/admin/settings/checkout`
