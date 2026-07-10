@@ -170,7 +170,13 @@ const shopName = shopData?.data?.shop?.name ?? shop
     .eq('shopify_shop_domain', shop)
     .single()
 
+  // For embedded experience, redirect to app within Shopify admin
+const host = (request.query as any).host
+if (host) {
+  return reply.redirect(`/app?shop=${shop}&host=${host}`)
+} else {
   return reply.redirect(`/?shop=${shop}`)
+}
 })
 
 await server.register(webhookRoutes)
