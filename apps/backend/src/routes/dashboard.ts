@@ -281,18 +281,6 @@ fastify.get('/dashboard/config', async (request, reply) => {
 })
 
 
-// ── POST /dashboard/complete-setup ──────────────────────────────────
-fastify.post('/dashboard/complete-setup', async (request, reply) => {
-  const { data, error } = await db
-    .from('merchant_configs')
-    .update({ setup_completed: true })
-    .eq('merchant_id', request.merchantId!)
-    .select()
-    .single()
-
-  if (error) return reply.status(500).send({ error: error.message })
-  return reply.send({ ok: true })
-})
 
 // ── POST /dashboard/complete-setup ──────────────────────────────────
 fastify.post('/dashboard/complete-setup', async (request, reply) => {
