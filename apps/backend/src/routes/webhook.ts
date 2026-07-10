@@ -14,12 +14,26 @@ export async function webhookRoutes(fastify: FastifyInstance) {
 
     const rawBody = (request as any).rawBody as Buffer
 
-    // Verify HMAC using app client secret FIRST — before any DB lookups
-    const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
-    if (!verifyShopifyHmac(rawBody, hmacHeader, appSecret)) {
-      fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
-      return reply.status(401).send({ error: 'Invalid signature' })
-    }
+   // Verify HMAC — try app secret first, then merchant-specific secret
+const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
+let hmacValid = verifyShopifyHmac(rawBody, hmacHeader, appSecret)
+
+if (!hmacValid) {
+  const { data: merchantForHmac } = await db
+    .from('merchants')
+    .select('shopify_webhook_secret')
+    .eq('shopify_shop_domain', shopDomain)
+    .single()
+
+  if (merchantForHmac?.shopify_webhook_secret) {
+    hmacValid = verifyShopifyHmac(rawBody, hmacHeader, merchantForHmac.shopify_webhook_secret)
+  }
+}
+
+if (!hmacValid) {
+  fastify.log.warn({ shopDomain }, 'Invalid HMAC signature')
+  return reply.status(401).send({ error: 'Invalid signature' })
+}
 
     // Look up merchant by shop domain
     const { data: merchant } = await db
