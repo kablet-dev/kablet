@@ -18,13 +18,6 @@ export async function webhookRoutes(fastify: FastifyInstance) {
 const appSecret = process.env.SHOPIFY_CLIENT_SECRET ?? ''
 let hmacValid = verifyShopifyHmac(rawBody, hmacHeader, appSecret)
 
-fastify.log.info({ 
-  appSecretPrefix: appSecret.substring(0, 8),
-  hmacHeaderPrefix: hmacHeader.substring(0, 8),
-  hmacHeaderLength: hmacHeader.length,
-  rawBodyLength: rawBody?.length,
-  hmacValid
-}, 'HMAC debug')
 
 if (!hmacValid) {
   const { data: merchantForHmac } = await db
