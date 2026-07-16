@@ -6,47 +6,19 @@ export async function onboardingRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (request, reply) => {
     const { shop } = request.query as { shop?: string }
 
-    let merchantName = ''
-    let checkoutEditorUrl = '#'
+let merchantName = ''
+let checkoutEditorUrl = '#'
 
-    if (shop) {
-      const { data: merchant } = await db
-        .from('merchants')
-        .select('name, shopify_access_token')
-        .eq('shopify_shop_domain', shop)
-        .single()
+if (shop) {
+  const { data: merchant } = await db
+    .from('merchants')
+    .select('name')
+    .eq('shopify_shop_domain', shop)
+    .single()
 
-      merchantName = merchant?.name ?? ''
-
-      if (merchant?.shopify_access_token) {
-        try {
-          const profileResponse = await fetch(
-            `https://${shop}/admin/api/2026-07/graphql.json`,
-            {
-              method: 'POST',
-              headers: {
-                'X-Shopify-Access-Token': merchant.shopify_access_token,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                query: `{ checkoutProfiles(first: 1) { edges { node { id } } } }`
-              })
-            }
-          )
-          const profileData = await profileResponse.json() as any
-          const profileGid = profileData?.data?.checkoutProfiles?.edges?.[0]?.node?.id
-          const profileId = profileGid?.split('/').pop() ?? ''
-
-          if (profileId) {
-            checkoutEditorUrl = `https://${shop}/admin/settings/checkout/editor/profiles/${profileId}?page=thank-you`
-          } else {
-            checkoutEditorUrl = `https://${shop}/admin/settings/checkout`
-          }
-        } catch {
-          checkoutEditorUrl = `https://${shop}/admin/settings/checkout`
-        }
-      }
-    }
+  merchantName = merchant?.name ?? ''
+  checkoutEditorUrl = `https://${shop}/admin/themes/current/editor?context=thankyou`
+}
 
     const html = `
 <!DOCTYPE html>

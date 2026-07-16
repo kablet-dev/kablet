@@ -269,17 +269,6 @@ if (!opportunity) {
   </BlockStack>
 </InlineLayout>
 
-{/* Social proof */}
-{(opportunity.trustRating || opportunity.socialProof) && (
-  <View>
-    <InlineStack spacing="tight">
-      <Text size="small" emphasis="bold">★★★★★ {opportunity.trustRating}</Text>
-      {opportunity.socialProof && (
-        <Text size="small" appearance="subdued">{opportunity.socialProof}</Text>
-      )}
-    </InlineStack>
-  </View>
-)}
 
         {/* CTAs */}
         <BlockStack spacing="tight">
