@@ -205,6 +205,41 @@ server.log.info({ shop, tokenPrefix: accessToken.substring(0, 10) }, 'Token upda
       .eq('merchant_id', existingMerchant.id)
 
     server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
+
+    // Create free subscription via Shopify Billing API on reinstall
+    try {
+      const billingRes = await fetch(`https://${shop}/admin/api/2026-07/graphql.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `mutation {
+            appSubscriptionCreate(
+              name: "Free"
+              returnUrl: "${process.env.RENDER_EXTERNAL_URL}/auth/callback"
+              lineItems: [{
+                plan: {
+                  appRecurringPricingDetails: {
+                    price: { amount: 0, currencyCode: USD }
+                    interval: EVERY_30_DAYS
+                  }
+                }
+              }]
+              test: false
+            ) {
+              appSubscription { id status }
+              userErrors { field message }
+            }
+          }`
+        }),
+      })
+      const billingData = await billingRes.json() as any
+      server.log.info({ shop, billing: billingData?.data?.appSubscriptionCreate }, 'Free subscription created on reinstall')
+    } catch (err) {
+      server.log.error({ shop, err }, 'Failed to create free subscription on reinstall')
+    }
   }
 
   const { data: merchant } = await db
