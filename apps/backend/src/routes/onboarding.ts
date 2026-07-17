@@ -17,7 +17,33 @@ if (shop) {
     .single()
 
   merchantName = merchant?.name ?? ''
-  checkoutEditorUrl = `https://${shop}/admin/themes/current/editor?context=thankyou`
+  // Get access token for this shop
+const { data: merchantData } = await db
+  .from('merchants')
+  .select('shopify_access_token')
+  .eq('shopify_shop_domain', shop)
+  .single()
+
+if (merchantData?.shopify_access_token) {
+  try {
+    const profileRes = await fetch(`https://${shop}/admin/api/2026-07/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'X-Shopify-Access-Token': merchantData.shopify_access_token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: `{ checkoutProfiles(first: 1, reverse: true) { edges { node { id } } } }` }),
+    })
+    const profileData = await profileRes.json() as any
+    const profileGid = profileData?.data?.checkoutProfiles?.edges?.[0]?.node?.id
+    const profileId = profileGid?.split('/')?.pop()
+    if (profileId) {
+      checkoutEditorUrl = `https://${shop}/admin/settings/checkout/editor/profiles/${profileId}?page=thank-you`
+    }
+  } catch {
+    checkoutEditorUrl = `https://${shop}/admin/settings/checkout`
+  }
+}
 }
 
     const html = `
