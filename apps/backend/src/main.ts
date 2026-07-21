@@ -56,11 +56,8 @@ server.get('/auth/callback', async (request, reply) => {
 if (charge_id && shop) {
   server.log.info({ shop, charge_id, plan_handle }, 'Plan selected via Managed Pricing')
   const host = (request.query as any).host
-  if (host) {
-    return reply.redirect(`/app?shop=${shop}&host=${host}`)
-  } else {
-    return reply.redirect(`/?shop=${shop}`)
-  }
+  const encodedHost = host ?? Buffer.from(`admin.shopify.com/store/${shop.replace('.myshopify.com', '')}`).toString('base64')
+  return reply.redirect(`/app?shop=${shop}&host=${encodedHost}`)
 }
 
 if (!code || !shop) {
