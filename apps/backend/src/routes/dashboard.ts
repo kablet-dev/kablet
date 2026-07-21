@@ -255,6 +255,7 @@ fastify.log.info({ profileId, profileGid }, 'Checkout profile fetched')
 const fallbackProfileIds: Record<string, string> = {
   'kablet-dev.myshopify.com': '4988010747',
   '4piius-i0.myshopify.com': '4107731126',
+  'kablet-dev-2.myshopify.com': '5045288996',
 }
 
 const resolvedProfileId = profileId || fallbackProfileIds[merchant.shopify_shop_domain] || ''
