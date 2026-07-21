@@ -50,11 +50,22 @@ server.get('/health', async () => {
 })
 
 server.get('/auth/callback', async (request, reply) => {
-  const { code, shop } = request.query as any
+  const { code, shop, charge_id, plan_handle } = request.query as any
 
-  if (!code || !shop) {
-    return reply.status(400).send({ error: 'Missing code or shop' })
+// Handle plan confirmation callback from Managed Pricing
+if (charge_id && shop) {
+  server.log.info({ shop, charge_id, plan_handle }, 'Plan selected via Managed Pricing')
+  const host = (request.query as any).host
+  if (host) {
+    return reply.redirect(`/app?shop=${shop}&host=${host}`)
+  } else {
+    return reply.redirect(`/?shop=${shop}`)
   }
+}
+
+if (!code || !shop) {
+  return reply.status(400).send({ error: 'Missing code or shop' })
+}
 
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
   method: 'POST',
