@@ -146,6 +146,36 @@ await fetch(
   }
 ) 
 
+// Create free subscription via Shopify Billing API
+try {
+  const billingRes = await fetch(`https://${shop}/admin/api/2026-07/graphql.json`, {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: `mutation appSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean) {
+        appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, lineItems: [{
+          plan: { appRecurringPricingDetails: { price: { amount: 0, currencyCode: USD }, interval: EVERY_30_DAYS } }
+        }]) {
+          appSubscription { id status }
+          confirmationUrl
+          userErrors { field message }
+        }
+      }`,
+      variables: {
+        name: "Free",
+        returnUrl: `${process.env.RENDER_EXTERNAL_URL}/auth/callback`,
+        test: true
+      }
+    }),
+  })
+  const billingData = await billingRes.json() as any
+  server.log.info({ shop, billing: billingData?.data?.appSubscriptionCreate }, 'Free plan billing created')
+} catch (err) {
+  server.log.error({ shop, err }, 'Billing error on new merchant')
+}
 server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
     }
   } else {
@@ -169,7 +199,37 @@ server.log.info({ shop, tokenPrefix: accessToken.substring(0, 10) }, 'Token upda
       })
       .eq('merchant_id', existingMerchant.id)
 
-    server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
+    // Create free subscription on reinstall
+try {
+  const billingRes = await fetch(`https://${shop}/admin/api/2026-07/graphql.json`, {
+    method: 'POST',
+    headers: {
+      'X-Shopify-Access-Token': accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: `mutation appSubscriptionCreate($name: String!, $returnUrl: URL!, $test: Boolean) {
+        appSubscriptionCreate(name: $name, returnUrl: $returnUrl, test: $test, lineItems: [{
+          plan: { appRecurringPricingDetails: { price: { amount: 0, currencyCode: USD }, interval: EVERY_30_DAYS } }
+        }]) {
+          appSubscription { id status }
+          confirmationUrl
+          userErrors { field message }
+        }
+      }`,
+      variables: {
+        name: "Free",
+        returnUrl: `${process.env.RENDER_EXTERNAL_URL}/auth/callback`,
+        test: true
+      }
+    }),
+  })
+  const billingData = await billingRes.json() as any
+  server.log.info({ shop, billing: billingData?.data?.appSubscriptionCreate }, 'Free plan billing created on reinstall')
+} catch (err) {
+  server.log.error({ shop, err }, 'Billing error on reinstall')
+}
+server.log.info({ shop }, 'Existing merchant token updated and config re-enabled')
   }
 
   const { data: merchant } = await db
