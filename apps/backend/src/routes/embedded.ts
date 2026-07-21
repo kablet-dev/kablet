@@ -472,13 +472,17 @@ const app = createApp({
     }
 
     async function openEditor() {
-      const token = await getToken();
-      const res = await fetch(API + '/dashboard/editor-url', {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      const data = await res.json();
-      window.open(data.url, '_blank');
-    }
+  const token = await getToken();
+  const res = await fetch(API + '/dashboard/editor-url', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const data = await res.json();
+  if (window.top) {
+    window.top.location.href = data.url;
+  } else {
+    window.location.href = data.url;
+  }
+}
 
     async function completeSetup() {
   if (previewInterval) clearInterval(previewInterval);
