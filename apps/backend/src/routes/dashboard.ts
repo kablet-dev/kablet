@@ -260,9 +260,10 @@ const fallbackProfileIds: Record<string, string> = {
 
 const resolvedProfileId = profileId || fallbackProfileIds[merchant.shopify_shop_domain] || ''
 
+const storeName = merchant.shopify_shop_domain.replace('.myshopify.com', '')
 const url = resolvedProfileId
-  ? `https://${merchant.shopify_shop_domain}/admin/settings/checkout/editor/profiles/${resolvedProfileId}?page=thank-you`
-  : `https://${merchant.shopify_shop_domain}/admin/settings/checkout`
+  ? `https://admin.shopify.com/store/${storeName}/settings/checkout/editor/profiles/${resolvedProfileId}?page=thank-you`
+  : `https://admin.shopify.com/store/${storeName}/settings/checkout`
 
     return reply.send({ url })
   } catch {

@@ -471,13 +471,16 @@ const app = createApp({
       document.getElementById('help-modal').style.display = 'none';
     }
 
-    async function openEditor() {
+   async function openEditor() {
   const token = await getToken();
   const res = await fetch(API + '/dashboard/editor-url', {
     headers: { Authorization: 'Bearer ' + token }
   });
   const data = await res.json();
-  if (window.top) {
+  // Use App Bridge redirect for embedded app navigation
+  if (window.shopify && window.shopify.redirectTo) {
+    window.shopify.redirectTo(data.url);
+  } else if (window.top) {
     window.top.location.href = data.url;
   } else {
     window.location.href = data.url;
