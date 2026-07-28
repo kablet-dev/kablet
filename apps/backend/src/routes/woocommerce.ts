@@ -413,33 +413,37 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
 
     fastify.log.info({ transactionEventId: event.id, orderId: order.id }, 'Direct WooCommerce order processed')
 
+    // Run engine in background — return 200 immediately so widget can start polling
     if (config?.engine_enabled) {
-      try {
-        await processTransactionEvent(event)
-        fastify.log.info({ transactionEventId: event.id }, 'Engine completed for direct order')
+      const fn = order.shipping?.first_name ?? order.billing?.first_name ?? ''
+      const ln = order.shipping?.last_name ?? order.billing?.last_name ?? ''
+      const custName = `${fn} ${ln}`.trim() || null
+      const custEmail = order.billing?.email ?? null
+      const custPhone = order.shipping?.phone ?? order.billing?.phone ?? null
+      const shipAddr = (order.shipping?.address_1 ? order.shipping : order.billing) ?? null
 
-        // After engine runs, update the opportunity instance with customer details
-        const fn = order.shipping?.first_name ?? order.billing?.first_name ?? ''
-        const ln = order.shipping?.last_name ?? order.billing?.last_name ?? ''
-        const custName = `${fn} ${ln}`.trim() || null
-        const custEmail = order.billing?.email ?? null
-        const custPhone = order.shipping?.phone ?? order.billing?.phone ?? null
-        const shipAddr = (order.shipping?.address_1 ? order.shipping : order.billing) ?? null
+      ;(async () => {
+        try {
+          await processTransactionEvent(event)
+          fastify.log.info({ transactionEventId: event.id }, 'Engine completed for direct order')
 
-        await db.from('opportunity_instances')
-          .update({
-            customer_name: custName,
-            customer_email: custEmail,
-            customer_phone: custPhone,
-            shipping_address: shipAddr,
-          })
-          .eq('transaction_event_id', event.id)
+          // Store customer details on the instance
+          await db.from('opportunity_instances')
+            .update({
+              customer_name: custName,
+              customer_email: custEmail,
+              customer_phone: custPhone,
+              shipping_address: shipAddr,
+            })
+            .eq('transaction_event_id', event.id)
 
-      } catch (err) {
-        fastify.log.error({ err }, 'Engine error on direct order')
-      }
+        } catch (err) {
+          fastify.log.error({ err }, 'Engine error on direct order')
+        }
+      })()
     }
 
+    // Return immediately — engine runs in background
     return reply.status(200).send({ ok: true })
   })
 
