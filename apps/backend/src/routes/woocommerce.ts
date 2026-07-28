@@ -373,7 +373,7 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
     }
 
     // Deduplicate
-    const wooOrderId = \`woo_\${order.id}\`
+    const wooOrderId = `woo_\${order.id}`
     const { data: existing } = await db
       .from('transaction_events')
       .select('id')
