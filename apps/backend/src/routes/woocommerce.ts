@@ -5,6 +5,32 @@ import { processTransactionEvent } from '../engine.js'
 
 export async function wooCommerceRoutes(fastify: FastifyInstance) {
 
+  // WooCommerce sends webhooks as application/x-www-form-urlencoded OR application/json
+  // We need to handle both content types
+  fastify.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'buffer' },
+    (req, body, done) => {
+      try {
+        ;(req as any).rawBody = body
+        // WooCommerce actually sends JSON data even with this content-type
+        // Try JSON parse first
+        try {
+          done(null, JSON.parse(body.toString()))
+        } catch {
+          const decoded = decodeURIComponent(body.toString())
+          try {
+            done(null, JSON.parse(decoded))
+          } catch {
+            done(null, Object.fromEntries(new URLSearchParams(body.toString())))
+          }
+        }
+      } catch (err) {
+        done(err as Error, undefined)
+      }
+    }
+  )
+
   // ── POST /webhook/woocommerce/order ────────────────────────────────
   // WooCommerce fires this on order.created and order.updated events.
   // We register only order.created from the plugin, but handle both.
