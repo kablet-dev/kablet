@@ -283,37 +283,53 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
       .eq('id', instance.definition_id)
       .single()
 
-    // Fetch customer details from WooCommerce via REST API
-    let customerName: string | null = null
-    let customerEmail: string | null = null
-    let customerPhone: string | null = null
-    let shippingAddress: object | null = null
-
-    const { data: wooMerchantFull } = await db
-      .from('woo_merchants')
-      .select('store_url, api_key, api_secret')
-      .eq('merchant_id', wooMerchant.merchant_id)
+    // Get customer details — already stored on instance when order was processed
+    const { data: instanceFull } = await db
+      .from('opportunity_instances')
+      .select('customer_name, customer_email, customer_phone, shipping_address')
+      .eq('id', instanceId)
       .single()
 
-    if (wooMerchantFull && txEvent?.shopify_order_id) {
-      try {
-        const wooOrderId = txEvent.shopify_order_id.replace('woo_', '')
-        const auth = Buffer.from(`${wooMerchantFull.api_key}:${wooMerchantFull.api_secret}`).toString('base64')
-        const orderRes = await fetch(
-          `${wooMerchantFull.store_url}/wp-json/wc/v3/orders/${wooOrderId}`,
-          { headers: { Authorization: `Basic ${auth}` } }
-        )
-        if (orderRes.ok) {
-          const wooOrder: any = await orderRes.json()
-          const fn = wooOrder.shipping?.first_name ?? wooOrder.billing?.first_name ?? ''
-          const ln = wooOrder.shipping?.last_name ?? wooOrder.billing?.last_name ?? ''
-          customerName = `${fn} ${ln}`.trim() || null
-          customerEmail = wooOrder.billing?.email ?? null
-          customerPhone = wooOrder.shipping?.phone ?? wooOrder.billing?.phone ?? null
-          shippingAddress = wooOrder.shipping ?? wooOrder.billing ?? null
+    let customerName: string | null = instanceFull?.customer_name ?? null
+    let customerEmail: string | null = instanceFull?.customer_email ?? null
+    let customerPhone: string | null = instanceFull?.customer_phone ?? null
+    let shippingAddress: object | null = instanceFull?.shipping_address ?? null
+
+    // Fallback: try customer_reference (often contains email)
+    if (!customerEmail) {
+      const ref = instance.customer_reference ?? ''
+      if (ref.includes('@')) customerEmail = ref
+    }
+
+    // Final fallback: fetch from WooCommerce REST API
+    if (!customerName && !customerEmail) {
+      const { data: wooMerchantFull } = await db
+        .from('woo_merchants')
+        .select('store_url, api_key, api_secret')
+        .eq('merchant_id', wooMerchant.merchant_id)
+        .single()
+
+      if (wooMerchantFull && txEvent?.shopify_order_id) {
+        try {
+          const wooOrderId = txEvent.shopify_order_id.replace('woo_', '')
+          const auth = Buffer.from(`${wooMerchantFull.api_key}:${wooMerchantFull.api_secret}`).toString('base64')
+          const orderRes = await fetch(
+            `${wooMerchantFull.store_url}/wp-json/wc/v3/orders/${wooOrderId}`,
+            { headers: { Authorization: `Basic ${auth}` } }
+          )
+          if (orderRes.ok) {
+            const wooOrder: any = await orderRes.json()
+            const fn = wooOrder.shipping?.first_name ?? wooOrder.billing?.first_name ?? ''
+            const ln = wooOrder.shipping?.last_name ?? wooOrder.billing?.last_name ?? ''
+            customerName = `${fn} ${ln}`.trim() || null
+            customerEmail = wooOrder.billing?.email ?? null
+            customerPhone = wooOrder.shipping?.phone ?? wooOrder.billing?.phone ?? null
+            shippingAddress = (wooOrder.shipping?.address_1 ? wooOrder.shipping : wooOrder.billing) ?? null
+            fastify.log.info({ instanceId }, 'Customer details from WC API fallback')
+          }
+        } catch (err) {
+          fastify.log.error({ err }, 'Failed to fetch WooCommerce order for fulfillment')
         }
-      } catch (err) {
-        fastify.log.error({ err }, 'Failed to fetch WooCommerce order for fulfillment')
       }
     }
 
@@ -331,6 +347,100 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
 
     fastify.log.info({ instanceId }, 'WooCommerce opportunity accepted')
     return reply.send({ ok: true })
+  })
+
+  // ── POST /woo/order ───────────────────────────────────────────────
+  // Called directly from the thank-you page — bypasses webhook entirely.
+  // Receives order data from PHP, processes it through the engine immediately.
+  fastify.post('/woo/order', async (request, reply) => {
+    const { order, storeUrl } = request.body as { order?: any; storeUrl?: string }
+
+    if (!order || !storeUrl) {
+      return reply.status(400).send({ error: 'Missing order or storeUrl' })
+    }
+
+    const normalizedUrl = storeUrl.replace(/\/$/, '')
+
+    const { data: wooMerchant } = await db
+      .from('woo_merchants')
+      .select('merchant_id')
+      .eq('store_url', normalizedUrl)
+      .single()
+
+    if (!wooMerchant) {
+      fastify.log.warn({ storeUrl }, 'WooCommerce merchant not found for direct order')
+      return reply.status(200).send({ ok: false })
+    }
+
+    // Deduplicate
+    const wooOrderId = \`woo_\${order.id}\`
+    const { data: existing } = await db
+      .from('transaction_events')
+      .select('id')
+      .eq('merchant_id', wooMerchant.merchant_id)
+      .eq('shopify_order_id', wooOrderId)
+      .maybeSingle()
+
+    if (existing) {
+      fastify.log.info({ orderId: order.id }, 'Direct order already processed')
+      return reply.status(200).send({ ok: true })
+    }
+
+    const { data: coreMerchant } = await db
+      .from('merchants')
+      .select('geography')
+      .eq('id', wooMerchant.merchant_id)
+      .single()
+
+    const { data: config } = await db
+      .from('merchant_configs')
+      .select('engine_enabled')
+      .eq('merchant_id', wooMerchant.merchant_id)
+      .single()
+
+    const eventData = translateWooOrder(order, wooMerchant.merchant_id, coreMerchant?.geography ?? 'AE')
+
+    const { data: event, error } = await db
+      .from('transaction_events')
+      .insert(eventData)
+      .select()
+      .single()
+
+    if (error || !event) {
+      fastify.log.error({ error }, 'Failed to insert direct WooCommerce order')
+      return reply.status(500).send()
+    }
+
+    fastify.log.info({ transactionEventId: event.id, orderId: order.id }, 'Direct WooCommerce order processed')
+
+    if (config?.engine_enabled) {
+      try {
+        await processTransactionEvent(event)
+        fastify.log.info({ transactionEventId: event.id }, 'Engine completed for direct order')
+
+        // After engine runs, update the opportunity instance with customer details
+        const fn = order.shipping?.first_name ?? order.billing?.first_name ?? ''
+        const ln = order.shipping?.last_name ?? order.billing?.last_name ?? ''
+        const custName = `${fn} ${ln}`.trim() || null
+        const custEmail = order.billing?.email ?? null
+        const custPhone = order.shipping?.phone ?? order.billing?.phone ?? null
+        const shipAddr = (order.shipping?.address_1 ? order.shipping : order.billing) ?? null
+
+        await db.from('opportunity_instances')
+          .update({
+            customer_name: custName,
+            customer_email: custEmail,
+            customer_phone: custPhone,
+            shipping_address: shipAddr,
+          })
+          .eq('transaction_event_id', event.id)
+
+      } catch (err) {
+        fastify.log.error({ err }, 'Engine error on direct order')
+      }
+    }
+
+    return reply.status(200).send({ ok: true })
   })
 
   // ── POST /woo/connect ──────────────────────────────────────────────
