@@ -10,6 +10,7 @@ import { embeddedRoutes } from './routes/embedded.js'
 import { payoutRoutes } from './routes/payouts.js'
 import { complianceRoutes } from './routes/compliance.js'
 import { wooCommerceRoutes } from './routes/woocommerce.js'
+import { wooDashboardRoutes } from './routes/woo-dashboard.js'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
@@ -206,6 +207,7 @@ await server.register(embeddedRoutes)
 await server.register(payoutRoutes)
 await server.register(complianceRoutes)
 await server.register(wooCommerceRoutes)
+await server.register(wooDashboardRoutes)
 
 const start = async () => {
   try {
