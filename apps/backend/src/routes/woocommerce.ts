@@ -184,9 +184,9 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
     const [instanceResult, definitionResult] = await Promise.all([
       db.from('opportunity_instances').select('id, current_state').eq('transaction_event_id', event.id).single(),
       db.from('opportunity_definitions')
-        .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
-        .eq('id', decision.selected_definition_id!)
-        .single()
+  .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating, shopify_product_price')
+  .eq('id', decision.selected_definition_id!)
+  .single()
     ])
 
     const instance = instanceResult.data
@@ -207,18 +207,19 @@ export async function wooCommerceRoutes(fastify: FastifyInstance) {
     }
 
     return reply.send({
-      opportunity: {
-        instanceId: instance.id,
-        headline: definition.headline,
-        description: definition.description,
-        valueProposition: definition.value_proposition,
-        visualAssetUrl: definition.visual_asset_url,
-        ctaLabel: definition.cta_label,
-        valueBullets: definition.value_bullets ?? [],
-        socialProof: definition.social_proof ?? null,
-        trustRating: definition.trust_rating ?? null,
-      }
-    })
+  opportunity: {
+    instanceId: instance.id,
+    headline: definition.headline,
+    description: definition.description,
+    valueProposition: definition.value_proposition,
+    visualAssetUrl: definition.visual_asset_url,
+    ctaLabel: definition.cta_label,
+    valueBullets: definition.value_bullets ?? [],
+    socialProof: definition.social_proof ?? null,
+    trustRating: definition.trust_rating ?? null,
+    price: definition.shopify_product_price ?? null,
+  }
+})
   })
 
   // ── POST /woo/opportunity/response ─────────────────────────────────
