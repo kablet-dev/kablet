@@ -1,9 +1,8 @@
-api_version = "2025-07"
+api_version = "2026-01"
 
 [[extensions]]
 name = "Kablet Offer"
 handle = "kablet-offer"
-
 uid = "871e343a-2fa8-5f98-72dc-4ef4f9f970f6a5451443"
 type = "ui_extension"
 

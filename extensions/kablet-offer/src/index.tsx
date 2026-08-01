@@ -1,22 +1,10 @@
-import {
-  reactExtension,
-  BlockStack,
-  InlineLayout,
-  InlineStack,
-  Button,
-  Image,
-  Text,
-  View,
-  Badge,
-  Link,
-  useApi,
-  useShop,
-} from '@shopify/ui-extensions-react/checkout'
-import { useState, useEffect } from 'react'
+import '@shopify/ui-extensions/preact'
+import { render } from 'preact'
+import { useState, useEffect, useRef } from 'preact/hooks'
 
 const API_BASE = 'https://kablet-backend.onrender.com'
 
-export default reactExtension('purchase.thank-you.block.render', () => <App />)
+declare const shopify: any
 
 interface Opportunity {
   instanceId: string
@@ -26,302 +14,290 @@ interface Opportunity {
   visualAssetUrl: string
   ctaLabel: string
   valueBullets: string[]
-  socialProof: string | null
-  trustRating: number | null
+  currency?: string
+  price?: string
+  priceWas?: string
+  deliveryNote?: string
 }
 
+/* ── Countdown hook ── */
 function useCountdown(seconds: number) {
-  const [timeLeft, setTimeLeft] = useState(seconds)
-
+  const [left, setLeft] = useState(seconds)
   useEffect(() => {
-    if (timeLeft <= 0) return
-    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000)
-    return () => clearInterval(timer)
-  }, [timeLeft])
-
-  const minutes = Math.floor(timeLeft / 60)
-  const secs = timeLeft % 60
-  return `${minutes}:${secs.toString().padStart(2, '0')}`
+    if (left <= 0) return
+    const t = setInterval(() => setLeft(n => n - 1), 1000)
+    return () => clearInterval(t)
+  }, [left])
+  const m = Math.floor(left / 60)
+  const s = left % 60
+  return { display: `${m}:${s.toString().padStart(2, '0')}`, expired: left <= 0 }
 }
 
-function getDeliveryDate(): string {
-  const date = new Date()
-  let daysAdded = 0
-  while (daysAdded < 2) {
-    date.setDate(date.getDate() + 1)
-    const day = date.getDay()
-    if (day !== 0 && day !== 6) daysAdded++
-  }
-  return date.toLocaleDateString('en-AE', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  })
+/* ── Root ── */
+export default function extension() {
+  render(<App />, document.body)
 }
 
 function App() {
-  const api = useApi()
-  const shop = useShop()
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null)
-  const [responded, setResponded] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const [accepted, setAccepted] = useState(false)
-  const [accepting, setAccepting] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [checked, setChecked] = useState(false)
-  const [orderId, setOrderId] = useState<string | null>(null)
+  const { display: countdown, expired } = useCountdown(180)
 
-  const shopDomain = shop?.myshopifyDomain
-  const countdown = useCountdown(600)
-  const deliveryDate = getDeliveryDate()
-
+  /* ── Get order ID ── */
   useEffect(() => {
-    const orderConfirmation = (api as any)?.orderConfirmation
-    if (!orderConfirmation) return
-
-    const current = orderConfirmation.current
-    if (current?.order?.id) {
-      setOrderId(current.order.id.toString().split('/').pop() ?? null)
-      return
+    const oc = (shopify as any)?.orderConfirmation
+    if (!oc) return
+    const tryGet = (val: any) => {
+      const id = val?.order?.id?.toString().split('/').pop()
+      if (id) fetchOffer(id)
     }
+    if (oc.current?.order?.id) { tryGet(oc.current); return }
+    const unsub = oc.subscribe((val: any) => { tryGet(val) })
+    return unsub
+  }, [])
 
-    const unsubscribe = orderConfirmation.subscribe((value: any) => {
-      if (value?.order?.id) {
-        setOrderId(value.order.id.toString().split('/').pop() ?? null)
-      }
-    })
+  /* ── Poll for offer ── */
+  function fetchOffer(orderId: string, attempt = 0) {
+    const shopDomain = shopify?.shop?.myshopifyDomain ?? ''
+    fetch(`${API_BASE}/opportunity/decision?shopifyOrderId=${orderId}&shopDomain=${shopDomain}`)
+      .then(r => r.json())
+      .then((d: any) => {
+        if (d.opportunity) {
+          setOpportunity(d.opportunity)
+        } else if (attempt < 10) {
+          setTimeout(() => fetchOffer(orderId, attempt + 1), 1500)
+        } else {
+          setChecked(true)
+        }
+      })
+      .catch(() => {
+        if (attempt < 10) setTimeout(() => fetchOffer(orderId, attempt + 1), 1500)
+        else setChecked(true)
+      })
+  }
 
-    return unsubscribe
-  }, [api])
-
-  useEffect(() => {
-    if (!orderId || !shopDomain) return
-
-    let attempts = 0
-
-    function tryFetch() {
-      attempts++
-      fetch(`${API_BASE}/opportunity/decision?shopifyOrderId=${orderId}&shopDomain=${shopDomain}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.opportunity) {
-            setOpportunity(data.opportunity)
-            return
-          } else if (attempts < 10) {
-  setTimeout(tryFetch, 1000)
-} else {
-  setChecked(true)
-}
-        })
-        .catch(() => {
-  if (attempts < 10) setTimeout(tryFetch, 1000)
-  else setChecked(true)
-})
+  /* ── Respond ── */
+  async function respond(response: 'ACCEPTED' | 'DECLINED') {
+    if (!opportunity) return
+    if (response === 'ACCEPTED') setLoading(true)
+    const shopDomain = shopify?.shop?.myshopifyDomain ?? ''
+    await fetch(`${API_BASE}/opportunity/response`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instanceId: opportunity.instanceId, response, shopDomain }),
+    }).catch(() => {})
+    if (response === 'ACCEPTED') {
+      setLoading(false)
+      setAccepted(true)
+    } else {
+      setDismissed(true)
     }
+  }
 
-    tryFetch()
-  }, [orderId, shopDomain])
+  if (dismissed || expired || checked) return null
 
-  if (countdown === '0:00') return null
-if (checked) return null
-
-// Show loading skeleton while waiting for opportunity
-if (!opportunity) {
-  return (
-    <View
-      padding="base"
-      border="base"
-      borderRadius="base"
-      background="primary"
-    >
-      <BlockStack spacing="base">
-        <InlineLayout columns={['fill', 'auto']} spacing="base">
-          <Text size="small" appearance="subdued" emphasis="bold">
-            Recommended for you
-          </Text>
-          <Text size="extraSmall" appearance="subdued">
-            Offer expires in {countdown}
-          </Text>
-        </InlineLayout>
-        <BlockStack spacing="tight">
-          <Text size="medium" emphasis="bold">
-            ✦ Personalizing your offer...
-          </Text>
-          <Text size="small" appearance="subdued">
-            We're finding something selected just for your order.
-          </Text>
-        </BlockStack>
-        <View
-          padding="base"
-          background="secondary"
-          borderRadius="base"
-        >
-          <Text size="small" appearance="subdued">
-            This will only take a moment.
-          </Text>
-        </View>
-      </BlockStack>
-    </View>
-  )
-}
-
-  // Success state
+  /* ── Success state ── */
   if (accepted) {
     return (
-      <View
-        padding="base"
-        border="base"
-        borderRadius="base"
-        background="primary"
-      >
-        <BlockStack spacing="base">
-          <InlineLayout columns={['auto', 'fill']} spacing="base">
-            <Text size="large" emphasis="bold">✓</Text>
-            <BlockStack spacing="extraTight">
-              <Text size="medium" emphasis="bold">Added to your order!</Text>
-              <Text size="small" appearance="subdued">
+      <s-section>
+        <s-stack direction="block" spacing="base" padding="base">
+          <s-stack direction="inline" spacing="base" block-alignment="center">
+            <s-icon source="checkmark" size="medium" />
+            <s-stack direction="block" spacing="none">
+              <s-heading level="2">Added to your order!</s-heading>
+              <s-text type="small" tone="subdued">
                 Your item is confirmed and will be delivered separately.
-              </Text>
-            </BlockStack>
-          </InlineLayout>
-          <View
-            padding="base"
-            border="base"
-            borderRadius="base"
-            background="secondary"
-          >
-            <BlockStack spacing="extraTight">
-              <Text size="small" appearance="subdued">Estimated delivery</Text>
-              <Text size="medium" emphasis="bold">{deliveryDate}</Text>
-              <Text size="extraSmall" appearance="subdued">
-                Cash on Delivery · Shipped separately
-              </Text>
-            </BlockStack>
-          </View>
-          <InlineLayout columns={['fill', 'auto']} spacing="base">
-  <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
-  <Link to="https://kablet.com/privacy/" appearance="monochrome">
-    <Text size="extraSmall" appearance="subdued">Privacy</Text>
-  </Link>
-</InlineLayout>
-        </BlockStack>
-      </View>
+              </s-text>
+            </s-stack>
+          </s-stack>
+          <s-stack direction="inline" spacing="loose" block-alignment="center">
+            <s-text type="small" tone="subdued">Powered by Kablet</s-text>
+            <s-link href="https://kablet.com/privacy/" target="_blank">
+              <s-text type="small" tone="subdued">Privacy</s-text>
+            </s-link>
+          </s-stack>
+        </s-stack>
+      </s-section>
     )
   }
 
-  if (responded) return null
+  /* ── Skeleton ── */
+  if (!opportunity) {
+    return (
+      <s-section>
+        <s-stack direction="block" spacing="base" padding="base">
+          {/* Header row */}
+          <s-stack direction="inline" spacing="base" block-alignment="center" inline-alignment="space-between">
+            <s-stack direction="inline" spacing="tight" block-alignment="center">
+              <s-icon source="star" size="small" />
+              <s-stack direction="block" spacing="none">
+                <s-skeleton-paragraph lines={1} />
+                <s-skeleton-paragraph lines={1} />
+              </s-stack>
+            </s-stack>
+            <s-skeleton-paragraph lines={1} />
+          </s-stack>
+          {/* Product row */}
+          <s-stack direction="inline" spacing="base" block-alignment="start">
+            <s-box min-inline-size="120px" min-block-size="120px" background="surface-secondary" border-radius="base" />
+            <s-stack direction="block" spacing="tight" flex="1">
+              <s-skeleton-paragraph lines={2} />
+              <s-skeleton-paragraph lines={1} />
+              <s-skeleton-paragraph lines={1} />
+            </s-stack>
+          </s-stack>
+          {/* Delivery */}
+          <s-box padding="tight" background="surface-secondary" border-radius="base">
+            <s-skeleton-paragraph lines={1} />
+          </s-box>
+          {/* Pills */}
+          <s-stack direction="inline" spacing="tight">
+            <s-skeleton-paragraph lines={1} />
+            <s-skeleton-paragraph lines={1} />
+            <s-skeleton-paragraph lines={1} />
+          </s-stack>
+          {/* Buttons */}
+          <s-stack direction="block" spacing="tight">
+            <s-box min-block-size="52px" background="surface-secondary" border-radius="base" />
+            <s-box min-block-size="44px" background="surface-secondary" border-radius="base" />
+          </s-stack>
+        </s-stack>
+      </s-section>
+    )
+  }
 
-  const stars = opportunity.trustRating
-    ? '★'.repeat(Math.floor(opportunity.trustRating)) + (opportunity.trustRating % 1 >= 0.5 ? '½' : '')
-    : null
+  /* ── Offer card ── */
+  const o = opportunity
+  const currency = o.currency || 'AED'
+  const pills = o.valueBullets?.slice(0, 3) ?? ['Ships separately', 'Cash on Delivery', 'One-click add']
+  const delivery = o.deliveryNote || 'Next-day delivery – Delivered separately to your door'
+  const ctaLabel = o.ctaLabel || 'Add to my order'
 
   return (
-    <View
-      padding="base"
-      border="base"
-      borderRadius="base"
-      background="primary"
-    >
-      <BlockStack spacing="base">
+    <s-section>
+      <s-stack direction="block" spacing="base" padding="base">
 
-        {/* Header: badge + countdown */}
-        <InlineLayout columns={['fill', 'auto']} spacing="base">
-          <Badge tone="info">✦ Recommended for you</Badge>
-          <Text size="extraSmall" appearance="subdued">
-            Offer ends in {countdown}
-          </Text>
-        </InlineLayout>
+        {/* ── Header ── */}
+        <s-stack direction="inline" spacing="base" block-alignment="center" inline-alignment="space-between">
+          <s-stack direction="inline" spacing="tight" block-alignment="center">
+            <s-icon source="star" size="small" />
+            <s-stack direction="block" spacing="none">
+              <s-text emphasis="bold">Recommended for you</s-text>
+              <s-text type="small" tone="subdued">Something we think you'll love</s-text>
+            </s-stack>
+          </s-stack>
+          <s-stack direction="inline" spacing="tight" block-alignment="center">
+            <s-icon source="clock" size="small" />
+            <s-text type="small" tone="subdued">Offer ends in</s-text>
+            <s-badge tone="info">{countdown}</s-badge>
+          </s-stack>
+        </s-stack>
 
-        {/* Image + content */}
-<InlineLayout columns={[100, 'fill']} spacing="base">
-  <Image
-    source={opportunity.visualAssetUrl}
-    accessibilityDescription="Product image"
-  />
-  <BlockStack spacing="tight">
-    <Text size="medium" emphasis="bold">
-      {opportunity.headline}
-    </Text>
-    <Text size="small" appearance="subdued">
-      {opportunity.description}
-    </Text>
-    <Text size="large" emphasis="bold">
-      {opportunity.valueProposition}
-    </Text>
-    <Text size="small" appearance="subdued">
-      🚚 Delivered separately to your door
-    </Text>
-    {opportunity.valueBullets && opportunity.valueBullets.length > 0 && (
-      <InlineStack spacing="tight">
-        {opportunity.valueBullets.map((bullet, i) => (
-          <View
-            key={i}
-            border="base"
-            borderRadius="base"
-            padding="extraTight"
+        <s-divider />
+
+        {/* ── Product row ── */}
+        <s-stack direction="inline" spacing="base" block-alignment="start">
+
+          {/* Image — fixed 120×120 */}
+          {o.visualAssetUrl ? (
+            <s-image
+              source={o.visualAssetUrl}
+              accessibility-description={o.headline}
+              aspect-ratio="1"
+              fit="cover"
+              border-radius="base"
+              max-inline-size="120px"
+            />
+          ) : (
+            <s-box
+              min-inline-size="120px"
+              min-block-size="120px"
+              background="surface-secondary"
+              border-radius="base"
+            />
+          )}
+
+          {/* Info */}
+          <s-stack direction="block" spacing="tight" flex="1">
+            <s-heading level="2">{o.headline}</s-heading>
+            <s-text type="small" tone="subdued">{o.description}</s-text>
+
+            {/* Price row */}
+            <s-stack direction="inline" spacing="tight" block-alignment="center">
+              {o.price && (
+                <s-text emphasis="bold" size="large">
+                  {currency} {parseFloat(o.price).toFixed(0)}
+                </s-text>
+              )}
+              {o.priceWas && (
+                <s-text tone="subdued">
+                  <s-text style="text-decoration:line-through">
+                    {currency} {parseFloat(o.priceWas).toFixed(0)}
+                  </s-text>
+                </s-text>
+              )}
+              <s-badge tone="success">Special offer</s-badge>
+            </s-stack>
+          </s-stack>
+        </s-stack>
+
+        {/* ── Delivery bar ── */}
+        <s-box padding="tight" background="surface-secondary" border-radius="base">
+          <s-stack direction="inline" spacing="tight" block-alignment="center">
+            <s-icon source="truck" size="small" />
+            <s-text type="small" emphasis="bold">{delivery}</s-text>
+          </s-stack>
+        </s-box>
+
+        {/* ── Pills ── */}
+        <s-stack direction="inline" spacing="tight">
+          {pills.map((pill, i) => (
+            <s-box
+              key={i}
+              padding="extraTight"
+              border="base"
+              border-radius="fullyRounded"
+              flex="1"
+            >
+              <s-stack direction="inline" spacing="extraTight" block-alignment="center" inline-alignment="center">
+                <s-icon source="checkmark" size="small" />
+                <s-text type="small" emphasis="bold">{pill}</s-text>
+              </s-stack>
+            </s-box>
+          ))}
+        </s-stack>
+
+        <s-divider />
+
+        {/* ── CTAs ── */}
+        <s-stack direction="block" spacing="tight">
+          <s-button
+            variant="primary"
+            loading={loading}
+            onClick={() => respond('ACCEPTED')}
           >
-            <InlineStack spacing="extraTight">
-              <Text size="extraSmall" emphasis="bold">✓</Text>
-              <Text size="extraSmall">{bullet}</Text>
-            </InlineStack>
-          </View>
-        ))}
-      </InlineStack>
-    )}
-  </BlockStack>
-</InlineLayout>
-
-
-        {/* CTAs */}
-        <BlockStack spacing="tight">
-          <Button
-            loading={accepting}
-            onPress={async () => {
-              setAccepting(true)
-              await fetch(`${API_BASE}/opportunity/response`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  instanceId: opportunity.instanceId,
-                  response: 'ACCEPTED',
-                  shopDomain,
-                }),
-              })
-              setAccepting(false)
-              setAccepted(true)
-            }}
-          >
-            {opportunity.ctaLabel}
-          </Button>
-          <Button
-            kind="secondary"
-            onPress={async () => {
-              await fetch(`${API_BASE}/opportunity/response`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  instanceId: opportunity.instanceId,
-                  response: 'DECLINED',
-                  shopDomain,
-                }),
-              })
-              setResponded(true)
-            }}
+            🔒 {ctaLabel}
+          </s-button>
+          <s-button
+            variant="secondary"
+            onClick={() => respond('DECLINED')}
           >
             No thanks
-          </Button>
-        </BlockStack>
+          </s-button>
+        </s-stack>
 
-        {/* Footer */}
-        <InlineLayout columns={['fill', 'auto']} spacing="base">
-  <Text size="extraSmall" appearance="subdued">Powered by Kablet</Text>
-  <Link
-    to="https://kablet.com/privacy/"
-    appearance="monochrome"
-  >
-    <Text size="extraSmall" appearance="subdued">Privacy</Text>
-  </Link>
-</InlineLayout>
+        {/* ── Footer ── */}
+        <s-stack direction="inline" spacing="loose" block-alignment="center" inline-alignment="space-between">
+          <s-text type="small" tone="subdued">Powered by Kablet</s-text>
+          <s-link href="https://kablet.com/privacy/" target="_blank">
+            <s-text type="small" tone="subdued">Privacy</s-text>
+          </s-link>
+        </s-stack>
 
-      </BlockStack>
-    </View>
+      </s-stack>
+    </s-section>
   )
 }

@@ -477,13 +477,14 @@ const app = createApp({
     headers: { Authorization: 'Bearer ' + token }
   });
   const data = await res.json();
-  // Use App Bridge redirect for embedded app navigation
-  if (window.shopify && window.shopify.redirectTo) {
-    window.shopify.redirectTo(data.url);
-  } else if (window.top) {
-    window.top.location.href = data.url;
-  } else {
-    window.location.href = data.url;
+  // App Bridge 3 — navigate parent frame to checkout editor
+  try {
+    const { Redirect } = AppBridge.actions;
+    const redirect = Redirect.create(app);
+    redirect.dispatch(Redirect.Action.REMOTE, data.url);
+  } catch(e) {
+    // Fallback: open in new tab if App Bridge redirect fails
+    window.open(data.url, '_blank');
   }
 }
 
