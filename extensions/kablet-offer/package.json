@@ -5,11 +5,11 @@
   "main": "dist/main.js",
   "license": "UNLICENSED",
   "dependencies": {
-    "@shopify/ui-extensions": "^2026.1.0",
+    "@shopify/ui-extensions": "2026.1.5",
+    "@preact/signals": "^2.10.1",
     "preact": "^10.19.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
     "typescript": "^5.0.0"
   }
 }
