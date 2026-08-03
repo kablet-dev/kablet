@@ -228,13 +228,33 @@ function App() {
   useEffect(() => {
     const oc = shopify?.orderConfirmation
     if (!oc) return
+
     const tryGet = (val: any) => {
       const id = val?.order?.id?.toString().split('/').pop()
-      if (id) fetchOffer(id)
+      if (id && id !== '0') fetchOffer(id)
     }
-    if (oc.current?.order?.id) { tryGet(oc.current); return }
+
+    // Check if order ID already available and valid
+    const currentId = oc.current?.order?.id?.toString().split('/').pop()
+    if (currentId && currentId !== '0') {
+      tryGet(oc.current)
+      return
+    }
+
+    // Subscribe to updates
     const unsub = oc.subscribe((val: any) => tryGet(val))
+
+    // Fallback: poll every 500ms until we get a valid order ID
+    const pollInterval = setInterval(() => {
+      const id = oc.current?.order?.id?.toString().split('/').pop()
+      if (id && id !== '0') {
+        clearInterval(pollInterval)
+        fetchOffer(id)
+      }
+    }, 500)
+
     return () => {
+      clearInterval(pollInterval)
       if (abortRef.current) abortRef.current.abort()
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
       unsub?.()
