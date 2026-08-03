@@ -41,7 +41,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
 .sb-footer{padding:10px 8px;border-top:1px solid #eeeef2}
 .sb-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px}
 .sb-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#a897f4,#6f57e8);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
-.sb-email{font-size:11.5px;color:#9898aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.sb-email{font-size:11.5px;color:#9898aa;overflow:hidden;flex:1;min-width:0}
 
 /* ── Page header ── */
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px}
