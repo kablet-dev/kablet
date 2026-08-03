@@ -601,6 +601,17 @@ tr:hover td{background:#fafafa}
         </div>
       </div>
 
+      <!-- Account -->
+      <div class="set-section">
+        <div class="set-section-header"><div class="set-section-title">Account</div></div>
+        <div class="set-section-body">
+          <div class="set-row"><span class="set-row-label">Store</span><span class="set-row-val" id="settings-shop-domain">—</span></div>
+          <div class="set-row"><span class="set-row-label">Merchant ID</span><span class="set-row-val" id="settings-merchant-id" style="font-family:monospace;font-size:11.5px">—</span></div>
+          <div class="set-row"><span class="set-row-label">Geography</span><span class="set-row-val" id="settings-geography">—</span></div>
+          <div class="set-row"><span class="set-row-label">Installed</span><span class="set-row-val" id="settings-installed">—</span></div>
+        </div>
+      </div>
+
       <!-- Support -->
       <div class="set-section">
         <div class="set-section-header"><div class="set-section-title">Support</div></div>
@@ -1117,7 +1128,15 @@ function updateStatusUI(){
   if(b){b.className='eng-badge '+(on?'on':'off');b.innerHTML='<span class="eng-dot '+(on?'on':'off')+'"></span>Engine '+(on?'Active':'Paused')}
 }
 async function loadSettings(){
-  const[config,bank]=await Promise.all([apiFetch('/dashboard/config'),apiFetch('/payouts/settings')]);
+  const[config,bank,int]=await Promise.all([apiFetch('/dashboard/config'),apiFetch('/payouts/settings'),apiFetch('/dashboard/integrations')]);
+  const el1=document.getElementById('settings-shop-domain');
+  const el2=document.getElementById('settings-merchant-id');
+  const el3=document.getElementById('settings-geography');
+  const el4=document.getElementById('settings-installed');
+  if(el1)el1.textContent=int?.shopify?.shop_domain||'—';
+  if(el2)el2.textContent=int?.merchant?.id||'—';
+  if(el3)el3.textContent=int?.merchant?.geography||'UAE';
+  if(el4)el4.textContent=int?.merchant?.installed_at?fmtDate(int.merchant.installed_at):'—';
   kabletEnabled=config.offers_enabled;
   updateStatusUI();
   if(bank.settings){

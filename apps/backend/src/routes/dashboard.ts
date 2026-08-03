@@ -482,7 +482,7 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     const merchantId = request.merchantId!
 
     const [merchantRes, configRes, wooRes] = await Promise.all([
-      db.from('merchants').select('shopify_shop_domain, geography, created_at').eq('id', merchantId).single(),
+      db.from('merchants').select('id, shopify_shop_domain, geography, created_at').eq('id', merchantId).single(),
       db.from('merchant_configs').select('*').eq('merchant_id', merchantId).single(),
       db.from('woo_merchants').select('store_url, store_name, updated_at').eq('merchant_id', merchantId).maybeSingle(),
     ])
@@ -512,6 +512,7 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
         offers_enabled: config?.offers_enabled ?? false,
       },
       merchant: {
+        id: merchant?.id ?? null,
         geography: merchant?.geography ?? 'UAE',
         installed_at: merchant?.created_at ?? null,
       },
