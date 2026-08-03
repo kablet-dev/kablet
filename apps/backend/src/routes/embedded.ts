@@ -1157,7 +1157,7 @@ async function init(){
   const avatarEl=document.getElementById('sb-avatar');
   const emailEl=document.getElementById('sb-email');
   if(avatarEl)avatarEl.textContent=displayName[0].toUpperCase();
-  if(emailEl)emailEl.textContent=shopDomain||'merchant';
+if(emailEl)emailEl.innerHTML=\`<div style="font-size:11.5px;color:#6b6b7e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${shopDomain||'merchant'}</div>\`;
   if(!config.setup_completed){showOnboarding()}else{showDashboard()}
 }
 init();
