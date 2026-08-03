@@ -253,16 +253,16 @@ function App() {
       .then((d: any) => {
         if (d.opportunity) {
           setOpportunity(d.opportunity)
-        } else if (attempt < 8) {
-          retryTimerRef.current = setTimeout(() => fetchOffer(orderId, attempt + 1), 1000)
+        } else if (attempt < 10) {
+          retryTimerRef.current = setTimeout(() => fetchOffer(orderId, attempt + 1), 2000)
         } else {
           setChecked(true)
         }
       })
       .catch((err: any) => {
         if (err?.name === 'AbortError') return
-        if (attempt < 8) {
-          retryTimerRef.current = setTimeout(() => fetchOffer(orderId, attempt + 1), 1000)
+        if (attempt < 10) {
+          retryTimerRef.current = setTimeout(() => fetchOffer(orderId, attempt + 1), 2000)
         } else {
           setChecked(true)
         }

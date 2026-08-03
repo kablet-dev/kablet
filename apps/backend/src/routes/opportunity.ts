@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
 import { fetchShopifyOrder } from '../shopify.js'
-import { processTransactionEvent } from '../engine.js'
 
 // ── Shared helper to build opportunity response ───────────────────
 async function buildOpportunityResponse(
@@ -116,44 +115,37 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       }
 
       // ── Transaction exists but engine hasn't run yet ─────────────
-      // Run engine synchronously right now so widget gets instant response
-      fastify.log.info({ transactionEventId: event.id }, 'Running engine synchronously for widget')
-      try {
-        await processTransactionEvent(event)
-      } catch (err) {
-        fastify.log.error({ err }, 'Synchronous engine run failed')
-        return reply.send({ opportunity: null })
-      }
+      // Webhook is processing in parallel — wait briefly then check again
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
-      // Fetch the decision the engine just made
-      const { data: newDecision } = await db
+      const { data: retryDecision } = await db
         .from('decision_records')
         .select('outcome_type, selected_definition_id')
         .eq('transaction_event_id', event.id)
-        .single()
+        .maybeSingle()
 
-      if (!newDecision || newDecision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
+      if (!retryDecision || retryDecision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
         return reply.send({ opportunity: null })
       }
 
-      const { data: newInstance } = await db
+      const { data: retryInstance } = await db
         .from('opportunity_instances')
         .select('id, current_state')
         .eq('transaction_event_id', event.id)
         .single()
 
-      if (!newInstance || !['SELECTED', 'PRESENTED'].includes(newInstance.current_state)) {
+      if (!retryInstance || !['SELECTED', 'PRESENTED'].includes(retryInstance.current_state)) {
         return reply.send({ opportunity: null })
       }
 
-      const opp = await buildOpportunityResponse(
-        newInstance.id,
-        newDecision.selected_definition_id!,
-        newInstance.current_state
+      const oppRetry = await buildOpportunityResponse(
+        retryInstance.id,
+        retryDecision.selected_definition_id!,
+        retryInstance.current_state
       )
 
-      fastify.log.info({ instanceId: newInstance.id }, 'Opportunity presented (sync engine)')
-      return reply.send({ opportunity: opp })
+      fastify.log.info({ instanceId: retryInstance.id }, 'Opportunity presented (after wait)')
+      return reply.send({ opportunity: oppRetry })
     }
 
     // ── Transaction doesn't exist yet — return null, widget will retry ──
