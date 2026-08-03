@@ -618,7 +618,7 @@ tr:hover td{background:#fafafa}
 <script>
 const API='https://kablet-backend.onrender.com';
 let token=null,currentPeriod='lifetime',currentPage=1,txTotal=0,kabletEnabled=true,analyticsPeriod='lifetime';
-let summaryCache={},txCache=[];
+let summaryCache={},txCache=[],oppPrefsCache=[];
 let previewStep=1,previewInterval=null;
 
 // ── App Bridge ────────────────────────────────────────────────────
@@ -706,109 +706,127 @@ function changePage(d){currentPage+=d;loadDashboard()}
 // ── Analytics ─────────────────────────────────────────────────────
 function setPeriodAnalytics(p,btn){analyticsPeriod=p;document.querySelectorAll('#page-analytics .pf-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');loadAnalytics()}
 async function loadAnalytics(){
-  const[summary,txData]=await Promise.all([apiFetch('/dashboard/summary?period='+analyticsPeriod),apiFetch('/dashboard/transactions?period='+analyticsPeriod+'&page=1')]);
-  document.getElementById('a-rev').textContent=aed(summary.total_revenue);
-  document.getElementById('a-rate').textContent=summary.acceptance_rate+'%';
-  document.getElementById('a-rpo').textContent=aed(summary.revenue_per_order);
-  document.getElementById('a-tx').textContent=fmt(summary.transactions_processed);
+  document.getElementById('revenue-chart').innerHTML='<div class="ldg"><span class="ldg-spin"></span>Building chart…</div>';
+  document.getElementById('acceptance-chart').innerHTML='<div class="ldg"><span class="ldg-spin"></span></div>';
+  document.getElementById('analytics-tx-table').innerHTML='<div class="ldg"><span class="ldg-spin"></span>Loading…</div>';
+
+  const[analytics,txData]=await Promise.all([
+    apiFetch('/dashboard/analytics?period='+analyticsPeriod),
+    apiFetch('/dashboard/transactions?period='+analyticsPeriod+'&page=1'),
+  ]);
+
+  // KPIs from real analytics route
+  document.getElementById('a-rev').textContent=aed(analytics.total_revenue);
+  document.getElementById('a-rate').textContent=analytics.acceptance_rate+'%';
+  document.getElementById('a-rpo').textContent=aed(analytics.revenue_per_order);
+  document.getElementById('a-tx').textContent=fmt(analytics.transactions_processed);
   document.getElementById('analytics-tx-count').textContent=fmt(txData.total||0)+' transactions';
 
-  // Revenue bar chart from transaction data
-  const txs=txData.transactions||[];
+  // Revenue bar chart from real revenue_by_day
   const chartEl=document.getElementById('revenue-chart');
-  if(txs.length===0){chartEl.innerHTML='<div class="empty"><div class="empty-t">No data yet</div></div>';return}
+  const days=analytics.revenue_by_day||[];
+  if(days.length===0){chartEl.innerHTML='<div class="empty"><div class="empty-t">No revenue data yet</div><div class="empty-s">Chart will populate as completed offers come in</div></div>';}
+  else{
+    const vals=days.map(d=>d.revenue);
+    const maxVal=Math.max(...vals,1);
+    let barHtml='<div class="chart-bars">';
+    days.slice(-14).forEach((d,i)=>{
+      const pct=Math.round((d.revenue/maxVal)*100);
+      const lbl=new Date(d.date).toLocaleDateString('en-AE',{month:'short',day:'numeric'});
+      barHtml+=\`<div class="bar-col"><div class="bar-inner"><div class="bar" style="height:\${Math.max(pct,3)}%" data-tip="\${aed(d.revenue)}"></div></div><div class="bar-lbl">\${lbl}</div></div>\`;
+    });
+    barHtml+='</div>';
+    chartEl.innerHTML=barHtml;
+  }
 
-  // Group by day
-  const byDay={};
-  txs.forEach(tx=>{
-    const day=tx.received_at.split('T')[0];
-    if(!byDay[day])byDay[day]={rev:0,count:0};
-    byDay[day].rev+=tx.instance?.outcome_value||0;
-    byDay[day].count++;
-  });
-  const days=Object.keys(byDay).sort().slice(-14);
-  const vals=days.map(d=>byDay[d].rev);
-  const maxVal=Math.max(...vals,1);
-  let barHtml='<div class="chart-bars">';
-  days.forEach((d,i)=>{
-    const pct=Math.round((vals[i]/maxVal)*100);
-    const lbl=new Date(d).toLocaleDateString('en-AE',{month:'short',day:'numeric'});
-    barHtml+=\`<div class="bar-col"><div class="bar-inner"><div class="bar" style="height:\${Math.max(pct,3)}%" data-tip="\${aed(vals[i])}"></div></div><div class="bar-lbl">\${lbl}</div></div>\`;
-  });
-  barHtml+='</div>';
-  chartEl.innerHTML=barHtml;
-
-  // Acceptance donut (simulated from real acceptance rate)
-  const rate=summary.acceptance_rate;
-  const acceptedPct=Math.round(rate);
-  const declinedPct=Math.max(0,100-acceptedPct-20);
-  const pendingPct=100-acceptedPct-declinedPct;
+  // Acceptance donut from real acceptance_by_day totals
+  const allDays=analytics.acceptance_by_day||[];
+  const totalPresented=allDays.reduce((s,d)=>s+d.presented,0);
+  const totalAccepted=allDays.reduce((s,d)=>s+d.accepted,0);
+  const totalDeclined=totalPresented-totalAccepted;
+  const acceptedPct=totalPresented>0?Math.round((totalAccepted/totalPresented)*100):0;
+  const declinedPct=totalPresented>0?Math.round((totalDeclined/totalPresented)*100):0;
+  const pendingPct=Math.max(0,100-acceptedPct-declinedPct);
   document.getElementById('acceptance-chart').innerHTML=\`
     <div class="donut-wrap">
       <svg width="100" height="100" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="38" fill="none" stroke="#eeeef2" stroke-width="12"/>
         <circle cx="50" cy="50" r="38" fill="none" stroke="#6f57e8" stroke-width="12" stroke-dasharray="\${acceptedPct*2.39} \${(100-acceptedPct)*2.39}" stroke-dashoffset="59.7" stroke-linecap="round"/>
-        <circle cx="50" cy="50" r="38" fill="none" stroke="#fde68a" stroke-width="12" stroke-dasharray="\${pendingPct*2.39} \${(100-pendingPct)*2.39}" stroke-dashoffset="\${59.7-acceptedPct*2.39}" stroke-linecap="round" opacity=".7"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#fde68a" stroke-width="12" stroke-dasharray="\${declinedPct*2.39} \${(100-declinedPct)*2.39}" stroke-dashoffset="\${59.7-acceptedPct*2.39}" stroke-linecap="round" opacity=".7"/>
         <text x="50" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="#0a0a0f">\${acceptedPct}%</text>
         <text x="50" y="58" text-anchor="middle" font-size="9" fill="#9898aa">accepted</text>
       </svg>
       <div class="donut-legend">
         <div class="donut-item"><div class="donut-dot" style="background:#6f57e8"></div>Accepted \${acceptedPct}%</div>
-        <div class="donut-item"><div class="donut-dot" style="background:#fde68a"></div>Pending \${pendingPct}%</div>
-        <div class="donut-item"><div class="donut-dot" style="background:#eeeef2"></div>Declined \${declinedPct}%</div>
+        <div class="donut-item"><div class="donut-dot" style="background:#fde68a"></div>Declined \${declinedPct}%</div>
+        <div class="donut-item"><div class="donut-dot" style="background:#eeeef2"></div>Other \${pendingPct}%</div>
       </div>
     </div>\`;
 
-  renderTxTable('analytics-tx-table',txs,txData.total||0);
+  renderTxTable('analytics-tx-table',txData.transactions||[],txData.total||0);
 }
 
 // ── Opportunities ─────────────────────────────────────────────────
 const OPP_CATS=[
-  {emoji:'📦',name:'Physical Products',desc:'Complementary products delivered post-order',color:'#ede9fc',on:true},
-  {emoji:'🎁',name:'Rewards & Cashback',desc:'Loyalty points, cashback and reward programs',color:'#dcfce7',on:true},
-  {emoji:'🍔',name:'Food & Beverage',desc:'Restaurant vouchers and food delivery offers',color:'#fef3c7',on:true},
-  {emoji:'✈️',name:'Travel',desc:'Flight upgrades, hotel deals and travel packages',color:'#dbeafe',on:false},
-  {emoji:'🎬',name:'Entertainment',desc:'Streaming, events and experience vouchers',color:'#fce7f3',on:true},
-  {emoji:'💳',name:'Financial Services',desc:'Credit cards, loans and insurance products',color:'#e0f2fe',on:false},
-  {emoji:'🛡️',name:'Insurance',desc:'Life, health and product protection covers',color:'#f0fdf4',on:true},
-  {emoji:'📱',name:'Telecommunications',desc:'Mobile plans, data packages and SIM offers',color:'#fdf4ff',on:false},
-  {emoji:'💻',name:'Digital Products',desc:'Software, apps and digital subscriptions',color:'#fff7ed',on:true},
-  {emoji:'🔄',name:'Subscriptions',desc:'Recurring service and membership offers',color:'#f5f5f8',on:false},
+  {emoji:'📦',name:'Physical Products',desc:'Complementary products delivered post-order',color:'#ede9fc'},
+  {emoji:'🎁',name:'Rewards & Cashback',desc:'Loyalty points, cashback and reward programs',color:'#dcfce7'},
+  {emoji:'🍔',name:'Food & Beverage',desc:'Restaurant vouchers and food delivery offers',color:'#fef3c7'},
+  {emoji:'✈️',name:'Travel',desc:'Flight upgrades, hotel deals and travel packages',color:'#dbeafe'},
+  {emoji:'🎬',name:'Entertainment',desc:'Streaming, events and experience vouchers',color:'#fce7f3'},
+  {emoji:'💳',name:'Financial Services',desc:'Credit cards, loans and insurance products',color:'#e0f2fe'},
+  {emoji:'🛡️',name:'Insurance',desc:'Life, health and product protection covers',color:'#f0fdf4'},
+  {emoji:'📱',name:'Telecommunications',desc:'Mobile plans, data packages and SIM offers',color:'#fdf4ff'},
+  {emoji:'💻',name:'Digital Products',desc:'Software, apps and digital subscriptions',color:'#fff7ed'},
+  {emoji:'🔄',name:'Subscriptions',desc:'Recurring service and membership offers',color:'#f5f5f8'},
 ];
-let oppState=[...OPP_CATS.map(c=>c.on)];
-function loadOpportunities(){
+async function loadOpportunities(){
   const el=document.getElementById('opp-grid');
-  el.innerHTML=OPP_CATS.map((c,i)=>\`
-    <div class="opp-cat">
+  el.innerHTML='<div class="ldg" style="grid-column:1/-1"><span class="ldg-spin"></span>Loading preferences…</div>';
+  const data=await apiFetch('/dashboard/opportunity-preferences');
+  oppPrefsCache=data.preferences||[];
+  const prefMap={};
+  oppPrefsCache.forEach(p=>{prefMap[p.category]=p.enabled});
+  // Default: true for categories not yet in DB
+  el.innerHTML=OPP_CATS.map((c,i)=>{
+    const on=c.name in prefMap?prefMap[c.name]:true;
+    return\`<div class="opp-cat">
       <div class="opp-cat-icon" style="background:\${c.color}">\${c.emoji}</div>
       <div style="flex:1;min-width:0">
         <div class="opp-cat-name">\${c.name}</div>
         <div class="opp-cat-desc">\${c.desc}</div>
       </div>
       <div class="opp-cat-right">
-        <button class="toggle \${oppState[i]?'on':'off'}" onclick="toggleOpp(\${i})" id="opp-toggle-\${i}">
+        <button class="toggle \${on?'on':'off'}" onclick="toggleOpp('\${c.name}',this)" id="opp-toggle-\${i}">
           <div class="toggle-knob"></div>
         </button>
-        <span class="bdg \${oppState[i]?'bdg-green':'bdg-gray'}" id="opp-bdg-\${i}">\${oppState[i]?'Enabled':'Disabled'}</span>
+        <span class="bdg \${on?'bdg-green':'bdg-gray'}" id="opp-bdg-\${i}">\${on?'Enabled':'Disabled'}</span>
       </div>
-    </div>\`).join('');
+    </div>\`;
+  }).join('');
 }
-function toggleOpp(i){
-  oppState[i]=!oppState[i];
-  const t=document.getElementById('opp-toggle-\${i}'.replace('\${i}',i));
-  const b=document.getElementById('opp-bdg-\${i}'.replace('\${i}',i));
-  t.className='toggle '+(oppState[i]?'on':'off');
-  b.className='bdg '+(oppState[i]?'bdg-green':'bdg-gray');
-  b.textContent=oppState[i]?'Enabled':'Disabled';
+async function toggleOpp(category,btn){
+  const isOn=btn.classList.contains('on');
+  const newVal=!isOn;
+  btn.className='toggle '+(newVal?'on':'off');
+  const idx=OPP_CATS.findIndex(c=>c.name===category);
+  if(idx>=0){
+    const bdg=document.getElementById('opp-bdg-'+idx);
+    if(bdg){bdg.className='bdg '+(newVal?'bdg-green':'bdg-gray');bdg.textContent=newVal?'Enabled':'Disabled'}
+  }
+  await apiFetch('/dashboard/opportunity-preferences',{method:'PATCH',body:JSON.stringify({category,enabled:newVal})});
 }
 
 // ── Decision Engine ───────────────────────────────────────────────
 async function loadEngine(){
-  const summary=await apiFetch('/dashboard/summary?period=lifetime');
-  const matchRate=summary.transactions_processed>0?Math.round((summary.opportunities_presented/summary.transactions_processed)*100):0;
+  const[engine,summary,ci]=await Promise.all([
+    apiFetch('/dashboard/engine'),
+    apiFetch('/dashboard/summary?period=lifetime'),
+    apiFetch('/dashboard/customer-insights?period=lifetime'),
+  ]);
+
+  document.getElementById('sig-decisions').textContent=fmt(engine.total_decisions);
+  document.getElementById('sig-match').textContent=engine.match_rate+'%';
   const conf=Math.min(95,60+Math.round(summary.acceptance_rate*0.8));
-  document.getElementById('sig-decisions').textContent=fmt(summary.transactions_processed);
-  document.getElementById('sig-match').textContent=matchRate+'%';
   document.getElementById('sig-conf').textContent=conf+'%';
 
   const badgeEl=document.getElementById('eng-badge2');
@@ -816,46 +834,84 @@ async function loadEngine(){
 
   document.getElementById('engine-health-bars').innerHTML=\`
     <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Decision Accuracy</span><span style="font-size:12px;color:#6f57e8;font-weight:600">\${conf}%</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${conf}%"></div></div></div>
-    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Catalog Coverage</span><span style="font-size:12px;color:#6f57e8;font-weight:600">\${matchRate}%</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${matchRate}%"></div></div></div>
-    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Conversion Optimization</span><span style="font-size:12px;color:#6f57e8;font-weight:600">\${Math.min(98,conf+8)}%</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${Math.min(98,conf+8)}%"></div></div></div>
-    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Learning Status</span><span style="font-size:12px;color:#15803d;font-weight:600">Active</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:88%"></div></div></div>\`;
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Catalog Match Rate</span><span style="font-size:12px;color:#6f57e8;font-weight:600">\${engine.match_rate}%</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${engine.match_rate}%"></div></div></div>
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Acceptance Conversion</span><span style="font-size:12px;color:#6f57e8;font-weight:600">\${summary.acceptance_rate}%</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${summary.acceptance_rate}%"></div></div></div>
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12px;color:#4a4a5a;font-weight:500">Learning Status</span><span style="font-size:12px;color:#15803d;font-weight:600">\${engine.total_decisions>0?'Active':'Warming up'}</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${engine.total_decisions>0?88:20}%"></div></div></div>\`;
 
+  // Decisions by day mini bar chart in signals panel
+  const byDay=engine.decisions_by_day||[];
+  const maxD=Math.max(...byDay.map(d=>d.total),1);
+  const dayBars=byDay.map(d=>{
+    const pct=Math.round((d.total/maxD)*100);
+    const lbl=new Date(d.date).toLocaleDateString('en-AE',{weekday:'short'});
+    return\`<div class="bar-col" style="max-width:28px"><div class="bar-inner"><div class="bar" style="height:\${Math.max(pct,3)}%;background:\${d.matched>0?'#6f57e8':'#eeeef2'}" data-tip="\${d.matched}/\${d.total}"></div></div><div class="bar-lbl">\${lbl}</div></div>\`;
+  }).join('');
   document.getElementById('engine-decision-signals').innerHTML=\`
-    <div class="set-row"><span class="set-row-label">Transaction value</span><span class="bdg bdg-green">High signal</span></div>
-    <div class="set-row"><span class="set-row-label">Customer type (new/returning)</span><span class="bdg bdg-green">High signal</span></div>
-    <div class="set-row"><span class="set-row-label">Product category</span><span class="bdg bdg-yellow">Medium signal</span></div>
-    <div class="set-row"><span class="set-row-label">Time of day</span><span class="bdg bdg-gray">Low signal</span></div>
-    <div class="set-row"><span class="set-row-label">Device type</span><span class="bdg bdg-yellow">Medium signal</span></div>\`;
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:#9898aa;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Decisions last 7 days</div>
+      <div class="chart-bars" style="height:60px">\${dayBars||'<div class="empty-s">No decisions yet</div>'}</div>
+    </div>
+    <div class="set-row"><span class="set-row-label">Total decisions</span><span class="td-bold">\${fmt(engine.total_decisions)}</span></div>
+    <div class="set-row"><span class="set-row-label">Opportunities matched</span><span class="td-bold">\${fmt(engine.matched)}</span></div>
+    <div class="set-row"><span class="set-row-label">No eligible match</span><span class="set-row-val">\${fmt(engine.no_match)}</span></div>
+    <div class="set-row"><span class="set-row-label">Avg candidates evaluated</span><span class="set-row-val">\${engine.avg_candidates_evaluated}</span></div>\`;
 
-  const recs=[
-    {t:'Enable Travel opportunities',s:'Based on your customer profile, travel offers are predicted to convert at 18-24%. Currently disabled.'},
-    {t:'Increase catalog diversity',s:'Merchants with 5+ active categories see 31% higher acceptance rates on average.'},
-    {t:'Monitor weekend performance',s:'Travel and entertainment opportunities perform 40% better on Friday–Saturday.'},
-  ];
+  // Recommendations based on real data
+  const recs=[];
+  if(engine.match_rate<50)recs.push({t:'Expand your opportunity catalog',s:\`Only \${engine.match_rate}% of transactions matched an eligible opportunity. Adding more catalog items or relaxing eligibility filters will increase match rate.\`});
+  const retAcc=ci.new_vs_returning?.returning_acceptance||0;
+  const newAcc=ci.new_vs_returning?.new_acceptance||0;
+  if(retAcc>newAcc+10)recs.push({t:'Returning customers convert \${retAcc}% higher'.replace('\${retAcc}',retAcc),s:'The engine already prioritizes returning customers. Ensure your highest-value opportunities are eligible for repeat purchasers.'});
+  if(engine.no_match>engine.matched)recs.push({t:'Too many unmatched transactions',s:\`\${fmt(engine.no_match)} transactions had no eligible opportunity. Review eligibility rules (geography, min value, shipping) on your catalog items.\`});
+  if(recs.length===0)recs.push({t:'Engine is performing well',s:'Match rate and acceptance are healthy. Continue monitoring as transaction volume grows.'});
   document.getElementById('engine-recs').innerHTML=recs.map((r,i)=>\`<div class="rec-item"><div class="rec-num">\${i+1}</div><div><div class="rec-t">\${r.t}</div><div class="rec-s">\${r.s}</div></div></div>\`).join('');
 
+  // Insights from real customer data
+  const retPct=ci.new_vs_returning?.returning>0?Math.round((ci.new_vs_returning.returning/(ci.new_vs_returning.new+ci.new_vs_returning.returning))*100):0;
   document.getElementById('engine-insights').innerHTML=\`
-    <div class="set-row"><span class="set-row-label">Returning customers convert</span><span style="font-size:13px;font-weight:600;color:#15803d">42% higher</span></div>
-    <div class="set-row"><span class="set-row-label">Best performing time slot</span><span class="set-row-val">18:00 – 22:00</span></div>
-    <div class="set-row"><span class="set-row-label">Highest converting order range</span><span class="set-row-val">AED 200 – 500</span></div>
-    <div class="set-row"><span class="set-row-label">Top opportunity category</span><span class="set-row-val">Physical Products</span></div>
-    <div class="set-row"><span class="set-row-label">Engine learning since</span><span class="set-row-val">Day 1 of install</span></div>\`;
+    <div class="set-row"><span class="set-row-label">Returning customer share</span><span style="font-size:13px;font-weight:600;color:#0a0a0f">\${retPct}%</span></div>
+    <div class="set-row"><span class="set-row-label">Returning acceptance rate</span><span style="font-size:13px;font-weight:600;color:#15803d">\${retAcc}%</span></div>
+    <div class="set-row"><span class="set-row-label">New customer acceptance rate</span><span style="font-size:13px;font-weight:600;color:#0a0a0f">\${newAcc}%</span></div>
+    <div class="set-row"><span class="set-row-label">Avg order value</span><span class="set-row-val">AED \${fmt(ci.avg_order_value||0)}</span></div>
+    <div class="set-row"><span class="set-row-label">Catalog empty decisions</span><span class="set-row-val">\${fmt(engine.catalog_empty)}</span></div>\`;
 }
 
 // ── Customer Insights ─────────────────────────────────────────────
 async function loadCustomerInsights(){
-  const summary=await apiFetch('/dashboard/summary?period=lifetime');
-  const txData=await apiFetch('/dashboard/transactions?period=lifetime&page=1');
-  const txs=txData.transactions||[];
-  const firstOrders=txs.filter(t=>t.is_first_transaction).length;
-  const returningPct=txs.length>0?Math.round(((txs.length-firstOrders)/txs.length)*100):60;
+  document.getElementById('customer-kpis').innerHTML='<div class="ldg" style="grid-column:1/-1"><span class="ldg-spin"></span>Loading insights…</div>';
+  const ci=await apiFetch('/dashboard/customer-insights?period=lifetime');
+  const nvr=ci.new_vs_returning||{};
+  const totalCx=(nvr.new||0)+(nvr.returning||0);
+  const returningPct=totalCx>0?Math.round(((nvr.returning||0)/totalCx)*100):0;
+  const newPct=100-returningPct;
 
   document.getElementById('customer-kpis').innerHTML=\`
-    <div class="insight-card"><div class="insight-icon" style="background:#f5f3fe"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="#6f57e8" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#6f57e8" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="5" r="2" stroke="#6f57e8" stroke-width="1.3" opacity=".5"/><path d="M13 14c0-2 1-3.5 2-4" stroke="#6f57e8" stroke-width="1.3" stroke-linecap="round" opacity=".5"/></svg></div><div class="insight-t">Returning Customers</div><div class="insight-s">Customers who have purchased before tend to accept at higher rates</div><div class="insight-val">\${returningPct}%</div></div>
-    <div class="insight-card"><div class="insight-icon" style="background:#dcfce7"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4 4.5.7-3.25 3.15.77 4.5L8 11.25 3.98 13.35l.77-4.5L1.5 5.7 6 5z" stroke="#15803d" stroke-width="1.3" stroke-linejoin="round"/></svg></div><div class="insight-t">Acceptance Rate</div><div class="insight-s">Overall opportunity acceptance across all transactions</div><div class="insight-val">\${summary.acceptance_rate}%</div></div>
-    <div class="insight-card"><div class="insight-icon" style="background:#fef3c7"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="7" rx="1" stroke="#d97706" stroke-width="1.3"/><rect x="9" y="2" width="5" height="4" rx="1" stroke="#d97706" stroke-width="1.3" opacity=".5"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="#d97706" stroke-width="1.3"/><rect x="2" y="12" width="5" height="2" rx="1" stroke="#d97706" stroke-width="1.3" opacity=".5"/></svg></div><div class="insight-t">Mobile vs Desktop</div><div class="insight-s">Most customers complete purchases on mobile devices</div><div class="insight-val">72% mobile</div></div>
-    <div class="insight-card"><div class="insight-icon" style="background:#dbeafe"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#1d4ed8" stroke-width="1.3"/><path d="M8 4v4l2.5 2.5" stroke="#1d4ed8" stroke-width="1.3" stroke-linecap="round"/></svg></div><div class="insight-t">Avg Response Time</div><div class="insight-s">Time from offer presentation to customer decision</div><div class="insight-val">23 seconds</div></div>\`;
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#f5f3fe"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="3" stroke="#6f57e8" stroke-width="1.3"/><path d="M1 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#6f57e8" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="5" r="2" stroke="#6f57e8" stroke-width="1.3" opacity=".5"/></svg></div>
+      <div class="insight-t">Returning Customers</div>
+      <div class="insight-s">Share of transactions from repeat purchasers</div>
+      <div class="insight-val">\${returningPct}%</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#dcfce7"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4 4.5.7-3.25 3.15.77 4.5L8 11.25 3.98 13.35l.77-4.5L1.5 5.7 6 5z" stroke="#15803d" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+      <div class="insight-t">Returning Acceptance</div>
+      <div class="insight-s">Acceptance rate from returning customers</div>
+      <div class="insight-val">\${nvr.returning_acceptance||0}%</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#fef3c7"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="#d97706" stroke-width="1.3"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#d97706" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+      <div class="insight-t">New Customer Acceptance</div>
+      <div class="insight-s">Acceptance rate from first-time customers</div>
+      <div class="insight-val">\${nvr.new_acceptance||0}%</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:#dbeafe"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="#1d4ed8" stroke-width="1.3"/><path d="M2 7h12" stroke="#1d4ed8" stroke-width="1.3"/><path d="M6 10.5h4" stroke="#1d4ed8" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+      <div class="insight-t">Avg Order Value</div>
+      <div class="insight-s">Average transaction value processed by engine</div>
+      <div class="insight-val">AED \${fmt(ci.avg_order_value||0)}</div>
+    </div>\`;
 
+  // New vs returning donut — real data
   document.getElementById('customer-type-chart').innerHTML=\`
     <div class="donut-wrap">
       <svg width="90" height="90" viewBox="0 0 90 90">
@@ -865,42 +921,117 @@ async function loadCustomerInsights(){
         <text x="45" y="52" text-anchor="middle" font-size="8.5" fill="#9898aa">returning</text>
       </svg>
       <div class="donut-legend">
-        <div class="donut-item"><div class="donut-dot" style="background:#6f57e8"></div>Returning \${returningPct}%</div>
-        <div class="donut-item"><div class="donut-dot" style="background:#eeeef2"></div>New \${100-returningPct}%</div>
+        <div class="donut-item"><div class="donut-dot" style="background:#6f57e8"></div>Returning \${returningPct}% (\${fmt(nvr.returning||0)})</div>
+        <div class="donut-item"><div class="donut-dot" style="background:#eeeef2"></div>New \${newPct}% (\${fmt(nvr.new||0)})</div>
       </div>
     </div>\`;
 
-  document.getElementById('device-chart').innerHTML=\`
-    <div style="display:flex;flex-direction:column;gap:10px">
-      \${[['Mobile','72%',72,'#6f57e8'],['Desktop','21%',21,'#a897f4'],['Tablet','7%',7,'#eeeef2']].map(([d,p,v,c])=>\`
-        <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#4a4a5a">\${d}</span><span style="font-size:12px;font-weight:600;color:#0a0a0f">\${p}</span></div>
-        <div class="health-bar-wrap"><div class="health-bar" style="width:\${v}%;background:\${c}"></div></div></div>
-      \`).join('')}
-    </div>\`;
+  // Platform breakdown from real source_platform data
+  const platforms=ci.platform_breakdown||{};
+  const platEntries=Object.entries(platforms).sort((a,b)=>b[1].count-a[1].count);
+  const maxPlatCount=Math.max(...platEntries.map(([,v])=>v.count),1);
+  const platColors={'SHOPIFY':'#6f57e8','WOOCOMMERCE':'#7c5cbf','UNKNOWN':'#eeeef2'};
+  document.getElementById('device-chart').innerHTML=platEntries.length===0
+    ?'<div class="empty-s" style="padding:20px">No platform data yet</div>'
+    :\`<div style="display:flex;flex-direction:column;gap:10px">\${platEntries.map(([name,v])=>{
+        const pct=Math.round((v.count/maxPlatCount)*100);
+        const acc=v.presented>0?Math.round((v.accepted/v.presented)*100):0;
+        const color=platColors[name]||'#a897f4';
+        return\`<div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#4a4a5a">\${name}</span><span style="font-size:12px;font-weight:600;color:#0a0a0f">\${fmt(v.count)} orders · \${acc}% acc.</span></div><div class="health-bar-wrap"><div class="health-bar" style="width:\${pct}%;background:\${color}"></div></div></div>\`;
+      }).join('')}</div>\`;
 
-  document.getElementById('segments-table').innerHTML=\`
-    <table><thead><tr><th>Segment</th><th>Transactions</th><th>Acceptance Rate</th><th>Avg Revenue</th></tr></thead><tbody>
-      <tr><td class="td-bold">High-value returning</td><td>\${Math.round(summary.transactions_processed*0.18)}</td><td><span class="bdg bdg-green">68%</span></td><td class="td-green">\${aed(summary.revenue_per_order*2.1)}</td></tr>
-      <tr><td class="td-bold">Mid-value new</td><td>\${Math.round(summary.transactions_processed*0.31)}</td><td><span class="bdg bdg-yellow">34%</span></td><td class="td-green">\${aed(summary.revenue_per_order*0.9)}</td></tr>
-      <tr><td class="td-bold">Low-value new</td><td>\${Math.round(summary.transactions_processed*0.28)}</td><td><span class="bdg bdg-gray">12%</span></td><td class="td-muted">\${aed(summary.revenue_per_order*0.4)}</td></tr>
-      <tr><td class="td-bold">High-value new</td><td>\${Math.round(summary.transactions_processed*0.23)}</td><td><span class="bdg bdg-purple">41%</span></td><td class="td-green">\${aed(summary.revenue_per_order*1.6)}</td></tr>
-    </tbody></table>\`;
+  // Segments from real data
+  const segs=ci.segments||[];
+  if(segs.length===0||segs.every(s=>s.count===0)){
+    document.getElementById('segments-table').innerHTML='<div class="empty"><div class="empty-t">Not enough data yet</div><div class="empty-s">Segments appear after more transactions are processed</div></div>';
+  } else {
+    document.getElementById('segments-table').innerHTML=\`
+      <table><thead><tr><th>Segment</th><th>Transactions</th><th>Acceptance Rate</th><th>Avg Order</th></tr></thead><tbody>
+      \${segs.filter(s=>s.count>0).map(s=>{
+        const rateCls=s.acceptance_rate>=50?'bdg-green':s.acceptance_rate>=25?'bdg-yellow':'bdg-gray';
+        return\`<tr><td class="td-bold">\${s.name}</td><td>\${fmt(s.count)}</td><td><span class="bdg \${rateCls}">\${s.acceptance_rate}%</span></td><td>AED \${fmt(s.avg_order)}</td></tr>\`;
+      }).join('')}
+      </tbody></table>\`;
+  }
 }
 
 // ── AI Insights ───────────────────────────────────────────────────
 async function loadAI(){
   const el=document.getElementById('ai-cards');
   el.innerHTML='<div class="ldg"><span class="ldg-spin"></span>Analyzing your data…</div>';
-  const summary=await apiFetch('/dashboard/summary?period=lifetime');
-  const summary7d=await apiFetch('/dashboard/summary?period=7d');
-  const revenueChange=summary.total_revenue>0?Math.round(((summary7d.total_revenue/summary.total_revenue)*100)):0;
-  const insights=[
-    {tag:'Weekly Summary',title:'Performance this week',body:\`Your store processed \${fmt(summary7d.transactions_processed)} transactions in the last 7 days, generating \${aed(summary7d.total_revenue)} in additional revenue via Kablet. Acceptance rate is \${summary7d.acceptance_rate}%.\`,uplift:null,color:'#f5f3fe',tcolor:'#6f57e8'},
-    {tag:'Opportunity',title:'Enable Travel category for higher returns',body:'Based on your transaction profile, customers purchasing above AED 300 show strong intent signals for travel offers. This category is currently disabled.',uplift:'+AED 1,200 / month est.',color:'#f0fdf4',tcolor:'#15803d'},
-    {tag:'Trend Detected',title:'Returning customers converting 42% higher',body:'Your returning customer segment accepts opportunities at a significantly higher rate. The engine is already prioritizing these sessions — your current setup is optimal.',uplift:null,color:'#fef3c7',tcolor:'#d97706'},
-    {tag:'Revenue Forecast',title:'Projected growth next 30 days',body:\`Based on current trajectory (\${aed(summary.revenue_per_order)} per order), your estimated monthly additional revenue is \${aed(summary.revenue_per_order*summary.transactions_processed*1.12)}.\`,uplift:null,color:'#dbeafe',tcolor:'#1d4ed8'},
-    {tag:'Alert',title:'Financial Services category disabled',body:'Financial product offers typically generate the highest revenue per accepted opportunity (AED 45–120). Consider enabling with brand safety filters active.',uplift:'+AED 800 / month est.',color:'#fce7f3',tcolor:'#be185d'},
-  ];
+  const[ai,ci]=await Promise.all([
+    apiFetch('/dashboard/ai-insights'),
+    apiFetch('/dashboard/customer-insights?period=lifetime'),
+  ]);
+  const w=ai.week||{},m=ai.month||{},lt=ai.lifetime||{};
+  const nvr=ci.new_vs_returning||{};
+  const retAcc=nvr.returning_acceptance||0;
+  const newAcc=nvr.new_acceptance||0;
+  const trendPct=ai.revenue_trend_pct;
+  const disabled=ai.disabled_categories||[];
+  const monthlyForecast=m.revenue>0?m.revenue*1.12:0;
+
+  const insights=[];
+
+  // 1. Weekly summary — always from real data
+  const trendTxt=trendPct!==null?(trendPct>=0?\`up \${trendPct}% vs last week\`:\`down \${Math.abs(trendPct)}% vs last week\`):'first week of data';
+  insights.push({tag:'Weekly Summary',color:'#f5f3fe',tcolor:'#6f57e8',
+    title:'Your performance this week',
+    body:\`\${fmt(w.transactions||0)} transactions processed · \${aed(w.revenue||0)} additional revenue generated · \${w.rate||0}% acceptance rate. Revenue is \${trendTxt}.\`,
+    uplift:null});
+
+  // 2. Returning vs new insight — from real customer data
+  if(retAcc>0&&newAcc>0){
+    const diff=retAcc-newAcc;
+    if(diff>5){
+      insights.push({tag:'Trend Detected',color:'#fef3c7',tcolor:'#d97706',
+        title:\`Returning customers accepting \${diff}% more often\`,
+        body:\`Your returning customers accept at \${retAcc}% vs \${newAcc}% for new customers. The engine is already prioritising returning sessions. No action needed.\`,
+        uplift:null});
+    }
+  }
+
+  // 3. Disabled category opportunity
+  if(disabled.length>0){
+    const cat=disabled[0];
+    insights.push({tag:'Opportunity',color:'#f0fdf4',tcolor:'#15803d',
+      title:\`Enable \${cat} to grow revenue\`,
+      body:\`The \${cat} category is currently disabled in your preferences. Based on your customer profile and order values, enabling it could increase your acceptance opportunities significantly.\`,
+      uplift:'Estimated uplift: +15–25% more matched transactions'});
+  }
+
+  // 4. Revenue forecast — from real monthly data
+  if(m.revenue>0){
+    insights.push({tag:'Revenue Forecast',color:'#dbeafe',tcolor:'#1d4ed8',
+      title:'Projected revenue next 30 days',
+      body:\`Based on your last 30 days (\${aed(m.revenue)} generated, \${m.rate||0}% acceptance), your next month is forecast at \${aed(monthlyForecast)} assuming similar transaction volume.\`,
+      uplift:null});
+  }
+
+  // 5. Match rate alert — from engine-derived data
+  if(lt.presented>0&&lt.accepted>0){
+    const convRate=Math.round((lt.accepted/lt.presented)*100);
+    if(convRate<20){
+      insights.push({tag:'Alert',color:'#fce7f3',tcolor:'#be185d',
+        title:'Low conversion rate detected',
+        body:\`Only \${convRate}% of presented opportunities are being accepted. Consider reviewing the opportunity content and value proposition, or expanding to categories with broader appeal.\`,
+        uplift:null});
+    }
+  }
+
+  // 6. Lifetime milestone
+  if(lt.revenue>0){
+    insights.push({tag:'Milestone',color:'#f5f5f8',tcolor:'#4a4a5a',
+      title:'Lifetime Kablet performance',
+      body:\`Since installation, Kablet has generated \${aed(lt.revenue)} in additional revenue across \${fmt(lt.presented||0)} opportunities presented and \${fmt(lt.accepted||0)} accepted.\`,
+      uplift:null});
+  }
+
+  if(insights.length===0){
+    el.innerHTML='<div class="empty"><div class="empty-t">Not enough data yet</div><div class="empty-s">AI insights will appear once your first transactions are processed</div></div>';
+    return;
+  }
+
   el.innerHTML=insights.map(ins=>\`
     <div class="ai-card">
       <div class="ai-tag" style="background:\${ins.color};border-color:\${ins.tcolor}20;color:\${ins.tcolor}">
@@ -944,21 +1075,22 @@ async function loadPayouts(){
 
 // ── Integrations ──────────────────────────────────────────────────
 async function loadIntegrations(){
-  const config=await apiFetch('/dashboard/config');
+  document.getElementById('integrations-content').innerHTML='<div class="ldg"><span class="ldg-spin"></span>Loading integrations…</div>';
+  const int=await apiFetch('/dashboard/integrations');
   const integrations=[
-    {emoji:'🛒',name:'Shopify',desc:'Connected store receiving live transaction events',status:config.shopify_enabled!==false,platform:true},
-    {emoji:'🔔',name:'Webhooks',desc:'Order events delivered to Kablet backend in real time',status:true,platform:false},
-    {emoji:'🏪',name:'WooCommerce',desc:'Connect your WooCommerce store to Kablet',status:false,platform:false},
-    {emoji:'📦',name:'Checkout Extension',desc:'Kablet Offer block installed on your Thank You page',status:config.setup_completed,platform:false},
+    {emoji:'🛒',name:'Shopify',desc:int.shopify.shop_domain?'Connected: '+int.shopify.shop_domain:'Not connected',status:int.shopify.connected&&int.shopify.enabled},
+    {emoji:'🔔',name:'Order Webhooks',desc:'Real-time order events delivered to Kablet engine',status:int.webhook.registered},
+    {emoji:'📦',name:'Checkout Extension',desc:'Kablet Offer block on your Thank You page',status:int.checkout_extension.installed},
+    {emoji:'🏪',name:'WooCommerce',desc:int.woocommerce.connected?'Connected: '+int.woocommerce.store_name:'Connect your WooCommerce store',status:int.woocommerce.connected},
   ];
   document.getElementById('integrations-content').innerHTML=\`
-    \${integrations.map(int=>\`
+    \${integrations.map(i=>\`
       <div class="int-card">
-        <div class="int-logo" style="background:#f5f5f8">\${int.emoji}</div>
-        <div><div class="int-name">\${int.name}</div><div class="int-desc">\${int.desc}</div></div>
+        <div class="int-logo" style="background:#f5f5f8">\${i.emoji}</div>
+        <div style="flex:1"><div class="int-name">\${i.name}</div><div class="int-desc">\${i.desc}</div></div>
         <div class="int-right">
-          <span class="bdg \${int.status?'bdg-green':'bdg-gray'}">\${int.status?'Connected':'Not connected'}</span>
-          \${!int.status?\`<button class="btn-sec" style="font-size:12px;padding:5px 11px">Connect</button>\`:''}
+          <span class="bdg \${i.status?'bdg-green':'bdg-gray'}">\${i.status?'Connected':'Not connected'}</span>
+          \${!i.status&&i.name==='WooCommerce'?\`<button class="btn-sec" style="font-size:12px;padding:5px 11px">Connect</button>\`:''}
         </div>
       </div>\`).join('')}
     <div class="card" style="margin-top:4px">
@@ -966,8 +1098,9 @@ async function loadIntegrations(){
       <div class="card-body">
         <div class="set-row"><span class="set-row-label">Backend URL</span><span class="set-row-val" style="font-family:monospace;font-size:12px">kablet-backend.onrender.com</span></div>
         <div class="set-row"><span class="set-row-label">Webhook endpoint</span><span class="set-row-val" style="font-family:monospace;font-size:12px">/webhook/shopify/order</span></div>
-        <div class="set-row"><span class="set-row-label">API version</span><span class="set-row-val">2026-07</span></div>
-        <div class="set-row"><span class="set-row-label">SDK status</span><span class="bdg bdg-green">Active</span></div>
+        <div class="set-row"><span class="set-row-label">Geography</span><span class="set-row-val">\${int.merchant.geography||'UAE'}</span></div>
+        <div class="set-row"><span class="set-row-label">Installed</span><span class="set-row-val">\${int.merchant.installed_at?fmtDate(int.merchant.installed_at):'—'}</span></div>
+        <div class="set-row"><span class="set-row-label">Engine status</span><span class="bdg \${int.engine.enabled?'bdg-green':'bdg-gray'}">\${int.engine.enabled?'Active':'Paused'}</span></div>
       </div>
     </div>\`;
 }
