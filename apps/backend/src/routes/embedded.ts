@@ -1147,8 +1147,17 @@ async function checkPayoutBanner(){
 
 // ── Init ──────────────────────────────────────────────────────────
 async function init(){
-  const config=await apiFetch('/dashboard/config');
+  const[config,intData]=await Promise.all([
+    apiFetch('/dashboard/config'),
+    apiFetch('/dashboard/integrations'),
+  ]);
   kabletEnabled=config.offers_enabled;
+  const shopDomain=intData?.shopify?.shop_domain||'';
+  const displayName=shopDomain?shopDomain.replace('.myshopify.com',''):'merchant';
+  const avatarEl=document.getElementById('sb-avatar');
+  const emailEl=document.getElementById('sb-email');
+  if(avatarEl)avatarEl.textContent=displayName[0].toUpperCase();
+  if(emailEl)emailEl.textContent=shopDomain||'merchant';
   if(!config.setup_completed){showOnboarding()}else{showDashboard()}
 }
 init();
