@@ -1,109 +1,167 @@
 import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
 import { fetchShopifyOrder } from '../shopify.js'
+import { processTransactionEvent } from '../engine.js'
+
+// ── Shared helper to build opportunity response ───────────────────
+async function buildOpportunityResponse(
+  instanceId: string,
+  definitionId: string,
+  currentState: string
+): Promise<object | null> {
+  const { data: definition } = await db
+    .from('opportunity_definitions')
+    .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating, template, shopify_product_price')
+    .eq('id', definitionId)
+    .single()
+
+  if (!definition) return null
+
+  // Mark as PRESENTED in background
+  if (currentState === 'SELECTED') {
+    db.from('opportunity_instances')
+      .update({ current_state: 'PRESENTED' })
+      .eq('id', instanceId)
+      .then(() => {})
+  }
+
+  return {
+    instanceId,
+    template: definition.template ?? 'PHYSICAL_PRODUCT',
+    headline: definition.headline,
+    description: definition.description,
+    valueProposition: definition.value_proposition,
+    visualAssetUrl: definition.visual_asset_url,
+    ctaLabel: definition.cta_label,
+    valueBullets: definition.value_bullets ?? [],
+    socialProof: definition.social_proof ?? null,
+    trustRating: definition.trust_rating ?? null,
+    price: definition.shopify_product_price
+      ? String(definition.shopify_product_price)
+      : null,
+  }
+}
 
 export async function opportunityRoutes(fastify: FastifyInstance) {
 
-  // ── GET /opportunity/decision ────────────────────────────────────────
-fastify.get('/opportunity/decision', async (request, reply) => {
-  const { shopifyOrderId, shopDomain } = request.query as {
-    shopifyOrderId?: string
-    shopDomain?: string
-  }
+  // ── GET /opportunity/decision ─────────────────────────────────────
+  fastify.get('/opportunity/decision', async (request, reply) => {
+    const { shopifyOrderId, shopDomain } = request.query as {
+      shopifyOrderId?: string
+      shopDomain?: string
+    }
 
-  if (!shopifyOrderId || !shopDomain || shopifyOrderId === '0') {
-    return reply.send({ opportunity: null })
-  }
+    if (!shopifyOrderId || !shopDomain || shopifyOrderId === '0') {
+      return reply.send({ opportunity: null })
+    }
 
-  // Run merchant lookup and transaction lookup in parallel
-  const [merchantResult, eventResult] = await Promise.all([
-    db.from('merchants')
+    // Look up merchant
+    const { data: merchant } = await db
+      .from('merchants')
       .select('id')
       .eq('shopify_shop_domain', shopDomain)
-      .single(),
-    db.from('transaction_events')
-      .select('id')
-      .eq('shopify_order_id', shopifyOrderId)
-      .maybeSingle()
-  ])
+      .single()
 
-  const merchant = merchantResult.data
-  const event = eventResult.data
+    if (!merchant) return reply.send({ opportunity: null })
 
-  if (!merchant || !event) return reply.send({ opportunity: null })
-
-  // Run config, decision in parallel
-  const [configResult, decisionResult] = await Promise.all([
-    db.from('merchant_configs')
+    // Check offers enabled
+    const { data: config } = await db
+      .from('merchant_configs')
       .select('offers_enabled')
       .eq('merchant_id', merchant.id)
-      .single(),
-    db.from('decision_records')
-      .select('outcome_type, selected_definition_id')
-      .eq('transaction_event_id', event.id)
       .single()
-  ])
 
-  const config = configResult.data
-  const decision = decisionResult.data
+    if (!config?.offers_enabled) return reply.send({ opportunity: null })
 
-  if (!config?.offers_enabled) return reply.send({ opportunity: null })
-  if (!decision || decision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
-    return reply.send({ opportunity: null })
-  }
+    // Look up transaction event
+    const { data: event } = await db
+      .from('transaction_events')
+      .select('*')
+      .eq('shopify_order_id', shopifyOrderId)
+      .eq('merchant_id', merchant.id)
+      .maybeSingle()
 
-  // Run instance and definition in parallel
-  const [instanceResult, definitionResult] = await Promise.all([
-    db.from('opportunity_instances')
-      .select('id, current_state')
-      .eq('transaction_event_id', event.id)
-      .single(),
-    db.from('opportunity_definitions')
-      .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating, template, shopify_product_price')
-      .eq('id', decision.selected_definition_id!)
-      .single()
-  ])
+    // ── Fast path: transaction + decision already exist ──────────────
+    if (event) {
+      const { data: decision } = await db
+        .from('decision_records')
+        .select('outcome_type, selected_definition_id')
+        .eq('transaction_event_id', event.id)
+        .maybeSingle()
 
-  const instance = instanceResult.data
-  const definition = definitionResult.data
+      if (decision) {
+        // Decision already made
+        if (decision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
+          return reply.send({ opportunity: null })
+        }
 
-  if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
-    return reply.send({ opportunity: null })
-  }
+        const { data: instance } = await db
+          .from('opportunity_instances')
+          .select('id, current_state')
+          .eq('transaction_event_id', event.id)
+          .single()
 
-  if (!definition) return reply.send({ opportunity: null })
+        if (!instance || !['SELECTED', 'PRESENTED'].includes(instance.current_state)) {
+          return reply.send({ opportunity: null })
+        }
 
-  // Update to PRESENTED
-  // Update to PRESENTED in background — don't await
-if (instance.current_state === 'SELECTED') {
-  ;(async () => {
-    await db
-      .from('opportunity_instances')
-      .update({ current_state: 'PRESENTED' })
-      .eq('id', instance.id)
-  })()
-}
+        const opp = await buildOpportunityResponse(
+          instance.id,
+          decision.selected_definition_id!,
+          instance.current_state
+        )
 
-  fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
+        fastify.log.info({ instanceId: instance.id }, 'Opportunity presented')
+        return reply.send({ opportunity: opp })
+      }
 
-  return reply.send({
-    opportunity: {
-      instanceId: instance.id,
-      template: definition.template ?? 'PHYSICAL_PRODUCT',
-      headline: definition.headline,
-      description: definition.description,
-      valueProposition: definition.value_proposition,
-      visualAssetUrl: definition.visual_asset_url,
-      ctaLabel: definition.cta_label,
-      valueBullets: definition.value_bullets ?? [],
-      socialProof: definition.social_proof ?? null,
-      trustRating: definition.trust_rating ?? null,
-      price: definition.shopify_product_price ? String(definition.shopify_product_price) : null,
+      // ── Transaction exists but engine hasn't run yet ─────────────
+      // Run engine synchronously right now so widget gets instant response
+      fastify.log.info({ transactionEventId: event.id }, 'Running engine synchronously for widget')
+      try {
+        await processTransactionEvent(event)
+      } catch (err) {
+        fastify.log.error({ err }, 'Synchronous engine run failed')
+        return reply.send({ opportunity: null })
+      }
+
+      // Fetch the decision the engine just made
+      const { data: newDecision } = await db
+        .from('decision_records')
+        .select('outcome_type, selected_definition_id')
+        .eq('transaction_event_id', event.id)
+        .single()
+
+      if (!newDecision || newDecision.outcome_type !== 'OPPORTUNITY_IDENTIFIED') {
+        return reply.send({ opportunity: null })
+      }
+
+      const { data: newInstance } = await db
+        .from('opportunity_instances')
+        .select('id, current_state')
+        .eq('transaction_event_id', event.id)
+        .single()
+
+      if (!newInstance || !['SELECTED', 'PRESENTED'].includes(newInstance.current_state)) {
+        return reply.send({ opportunity: null })
+      }
+
+      const opp = await buildOpportunityResponse(
+        newInstance.id,
+        newDecision.selected_definition_id!,
+        newInstance.current_state
+      )
+
+      fastify.log.info({ instanceId: newInstance.id }, 'Opportunity presented (sync engine)')
+      return reply.send({ opportunity: opp })
     }
-  })
-})
 
-  // ── POST /opportunity/response ───────────────────────────────────────
+    // ── Transaction doesn't exist yet — return null, widget will retry ──
+    // The webhook will create it within 1-2 seconds
+    return reply.send({ opportunity: null })
+  })
+
+  // ── POST /opportunity/response ────────────────────────────────────
   fastify.post('/opportunity/response', async (request, reply) => {
     const { instanceId, response, shopDomain } = request.body as {
       instanceId?: string
@@ -170,7 +228,6 @@ if (instance.current_state === 'SELECTED') {
       .eq('id', instance.definition_id)
       .single()
 
-    // Fetch original order to get customer fulfillment details
     let customerName: string | null = null
     let customerEmail: string | null = null
     let customerPhone: string | null = null
@@ -183,20 +240,17 @@ if (instance.current_state === 'SELECTED') {
           merchant.shopify_access_token,
           event.shopify_order_id
         )
-
         const firstName = originalOrder.shipping_address?.first_name ?? ''
         const lastName = originalOrder.shipping_address?.last_name ?? ''
         customerName = `${firstName} ${lastName}`.trim() || null
         customerEmail = originalOrder.email ?? null
         customerPhone = originalOrder.shipping_address?.phone ?? null
         shippingAddress = originalOrder.shipping_address ?? null
-
       } catch (err) {
         fastify.log.error({ err }, 'Failed to fetch original order for fulfillment details')
       }
     }
 
-    // Update instance to COMPLETED with fulfillment details
     await db
       .from('opportunity_instances')
       .update({
@@ -213,7 +267,6 @@ if (instance.current_state === 'SELECTED') {
       .eq('id', instanceId)
 
     fastify.log.info({ instanceId }, 'Opportunity accepted and completed')
-
     return reply.send({ ok: true })
   })
 }
