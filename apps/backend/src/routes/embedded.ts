@@ -22,8 +22,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
 
 /* ── Shell ── */
 .shell{display:flex;min-height:100vh}
-.sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #eeeef2;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:10}
-.main{margin-left:220px;flex:1;min-width:0;padding:32px 36px}
+.sidebar{width:220px;min-height:100vh;background:#fff;border-right:1px solid #eeeef2;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;left:0;bottom:0;z-index:10;align-self:flex-start}
+.main{flex:1;min-width:0;padding:32px 36px}
 .page{display:none;max-width:1080px}
 .page.active{display:block}
 
