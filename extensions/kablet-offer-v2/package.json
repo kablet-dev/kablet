@@ -1,0 +1,11 @@
+{
+  "name": "kablet-offer-v2",
+  "private": true,
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@preact/signals": "^2.10.1",
+    "@shopify/ui-extensions": "2026.7.x",
+    "preact": "^10.29.8"
+  }
+}

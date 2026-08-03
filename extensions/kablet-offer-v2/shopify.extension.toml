@@ -1,0 +1,14 @@
+api_version = "2026-07"
+
+[[extensions]]
+name = "Kablet Offer"
+handle = "kablet-offer-v2"
+type = "ui_extension"
+uid = "ea4e5360-1753-d993-10b9-452eae5df8e8c50b180e"
+
+[[extensions.targeting]]
+module = "./src/Checkout.tsx"
+target = "purchase.thank-you.block.render"
+
+[extensions.capabilities]
+network_access = true
