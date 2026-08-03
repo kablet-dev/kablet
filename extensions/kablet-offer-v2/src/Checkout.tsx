@@ -6,20 +6,174 @@ const API_BASE = 'https://kablet-backend.onrender.com'
 
 declare const shopify: any
 
+// ── Template types ────────────────────────────────────────────────
+type Template =
+  | 'PHYSICAL_PRODUCT'
+  | 'REWARD'
+  | 'CASHBACK'
+  | 'COUPON'
+  | 'TRAVEL'
+  | 'INSURANCE'
+  | 'DIGITAL'
+  | 'FINANCIAL'
+  | 'ENTERTAINMENT'
+  | 'SUBSCRIPTION'
+
 interface Opportunity {
   instanceId: string
+  template: Template
   headline: string
   description: string
   valueProposition: string
   visualAssetUrl: string
   ctaLabel: string
   valueBullets: string[]
+  socialProof: string | null
+  trustRating: number | null
+  price: string | null
   currency?: string
-  price?: string
   priceWas?: string
   deliveryNote?: string
 }
 
+// ── Template config ───────────────────────────────────────────────
+// Each template defines its own header label, icon, badge tone,
+// CTA style, and which sections to show/hide.
+const TEMPLATE_CONFIG: Record<Template, {
+  headerLabel: string
+  headerSub: string
+  icon: string
+  badgeTone: string
+  showImage: boolean
+  showDelivery: boolean
+  showPrice: boolean
+  accentTone: string
+  defaultCta: string
+  defaultPills: string[]
+}> = {
+  PHYSICAL_PRODUCT: {
+    headerLabel: 'Add to your order',
+    headerSub: 'Just for you',
+    icon: 'gift',
+    badgeTone: 'critical',
+    showImage: true,
+    showDelivery: true,
+    showPrice: true,
+    accentTone: 'success',
+    defaultCta: 'Add to my order',
+    defaultPills: ['Ships separately', 'Cash on Delivery', 'Easy returns'],
+  },
+  REWARD: {
+    headerLabel: "You've unlocked a reward",
+    headerSub: 'Exclusive for you',
+    icon: 'star',
+    badgeTone: 'warning',
+    showImage: false,
+    showDelivery: false,
+    showPrice: false,
+    accentTone: 'warning',
+    defaultCta: 'Claim my reward',
+    defaultPills: ['Instant reward', 'No minimum spend', 'Valid 30 days'],
+  },
+  CASHBACK: {
+    headerLabel: 'Cashback offer',
+    headerSub: 'Money back in your pocket',
+    icon: 'money',
+    badgeTone: 'success',
+    showImage: false,
+    showDelivery: false,
+    showPrice: false,
+    accentTone: 'success',
+    defaultCta: 'Claim cashback',
+    defaultPills: ['Instant cashback', 'No conditions', 'Auto-applied'],
+  },
+  COUPON: {
+    headerLabel: 'Your exclusive coupon',
+    headerSub: 'Limited time offer',
+    icon: 'discount',
+    badgeTone: 'critical',
+    showImage: false,
+    showDelivery: false,
+    showPrice: false,
+    accentTone: 'critical',
+    defaultCta: 'Get my coupon',
+    defaultPills: ['One time use', 'Expires soon', 'Transferable'],
+  },
+  TRAVEL: {
+    headerLabel: 'Travel upgrade for you',
+    headerSub: 'Exclusive offer',
+    icon: 'location',
+    badgeTone: 'info',
+    showImage: true,
+    showDelivery: false,
+    showPrice: false,
+    accentTone: 'info',
+    defaultCta: 'Claim my upgrade',
+    defaultPills: ['Exclusive rate', 'Flexible dates', 'Free cancellation'],
+  },
+  INSURANCE: {
+    headerLabel: 'Protect your order',
+    headerSub: 'Peace of mind included',
+    icon: 'security',
+    badgeTone: 'success',
+    showImage: false,
+    showDelivery: false,
+    showPrice: true,
+    accentTone: 'success',
+    defaultCta: 'Add protection',
+    defaultPills: ['Instant coverage', 'Claims in 24h', 'Cancel anytime'],
+  },
+  DIGITAL: {
+    headerLabel: 'Digital offer for you',
+    headerSub: 'Instant access',
+    icon: 'apps',
+    badgeTone: 'info',
+    showImage: true,
+    showDelivery: false,
+    showPrice: true,
+    accentTone: 'info',
+    defaultCta: 'Get instant access',
+    defaultPills: ['Instant delivery', 'No shipping', 'Always available'],
+  },
+  FINANCIAL: {
+    headerLabel: 'Financial offer',
+    headerSub: 'Tailored for you',
+    icon: 'bank',
+    badgeTone: 'neutral',
+    showImage: false,
+    showDelivery: false,
+    showPrice: false,
+    accentTone: 'neutral',
+    defaultCta: 'Apply now',
+    defaultPills: ['Quick approval', 'No hidden fees', 'Secure'],
+  },
+  ENTERTAINMENT: {
+    headerLabel: 'Entertainment offer',
+    headerSub: 'Enjoy more',
+    icon: 'play',
+    badgeTone: 'warning',
+    showImage: true,
+    showDelivery: false,
+    showPrice: true,
+    accentTone: 'warning',
+    defaultCta: 'Get access',
+    defaultPills: ['Stream instantly', 'Cancel anytime', 'HD quality'],
+  },
+  SUBSCRIPTION: {
+    headerLabel: 'Subscription offer',
+    headerSub: 'Special member rate',
+    icon: 'refresh',
+    badgeTone: 'info',
+    showImage: true,
+    showDelivery: false,
+    showPrice: true,
+    accentTone: 'success',
+    defaultCta: 'Start subscription',
+    defaultPills: ['Cancel anytime', 'First month free', 'Exclusive access'],
+  },
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
 function formatPrice(value: string): string {
   return new Intl.NumberFormat('en-AE', {
     minimumFractionDigits: 0,
@@ -44,6 +198,7 @@ function useCountdown(seconds: number | null) {
   return { display: `${m}:${s.toString().padStart(2, '0')}`, expired: left <= 0 }
 }
 
+// ── App ───────────────────────────────────────────────────────────
 export default async () => {
   render(<App />, document.body)
 }
@@ -59,9 +214,7 @@ function App() {
   const { display: countdown, expired } = useCountdown(opportunity ? 180 : null)
 
   const isMounted = useRef(true)
-  useEffect(() => {
-    return () => { isMounted.current = false }
-  }, [])
+  useEffect(() => { return () => { isMounted.current = false } }, [])
 
   const abortRef = useRef<AbortController | null>(null)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,13 +276,11 @@ function App() {
     setError(false)
     if (response === 'ACCEPTED') setLoading(true)
     const shopDomain = shopify?.shop?.myshopifyDomain ?? ''
-    const controller = new AbortController()
     try {
       const res = await fetch(`${API_BASE}/opportunity/response`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instanceId: opportunity.instanceId, response, shopDomain }),
-        signal: controller.signal,
       })
       if (!res.ok) throw new Error('failed')
       if (!isMounted.current) return
@@ -146,20 +297,7 @@ function App() {
 
   if (dismissed || checked || (expired && opportunity)) return null
 
-  // CARD CONTAINER NOTE:
-  // There is no dedicated s-card component in Checkout UI Extensions 2026-07.
-  // s-section is the official card equivalent (confirmed: Polaris React docs state
-  // "Card is now available as a framework-agnostic web component. Start using <s-section>").
-  // However, s-section's visual card appearance (border, radius, shadow) is controlled
-  // entirely by the merchant's checkout branding — it cannot be forced by the extension.
-  // To guarantee a visible card outline on all themes, we wrap content in an s-box with
-  // border="base" and borderRadius="base" — both props verified from the official s-stack
-  // docs (same prop system applies to s-box). This produces a consistent card appearance
-  // independent of the merchant's theme while remaining fully native and non-custom.
-  // The outer s-section is kept as the semantic container; the inner s-box provides
-  // the visible card treatment.
-
-  /* ── Success ── */
+  // ── Success state (same for all templates) ────────────────────
   if (accepted) return (
     <s-section>
       <s-box border="base" borderRadius="base" padding="base">
@@ -167,16 +305,26 @@ function App() {
           <s-stack direction="inline" gap="base" alignItems="center">
             <s-icon type="check-circle" tone="success" size="large" />
             <s-stack direction="block" gap="none">
-              <s-heading level="2">Added to your order</s-heading>
-              {/* TODO: type="small" — not confirmed in official 2026-07 s-text props. Leaving unchanged. */}
+              <s-heading level="2">
+                {opportunity?.template === 'REWARD' || opportunity?.template === 'CASHBACK'
+                  ? 'Reward claimed!'
+                  : opportunity?.template === 'COUPON'
+                  ? 'Coupon activated!'
+                  : opportunity?.template === 'INSURANCE'
+                  ? 'Protection added!'
+                  : 'Added to your order'}
+              </s-heading>
               <s-text color="subdued" type="small">
-                {opportunity?.deliveryNote ?? 'Your item will be delivered separately.'}
+                {opportunity?.template === 'DIGITAL'
+                  ? 'Check your email for access details.'
+                  : opportunity?.template === 'FINANCIAL'
+                  ? "We'll be in touch shortly."
+                  : opportunity?.deliveryNote ?? 'Your item will be delivered separately.'}
               </s-text>
             </s-stack>
           </s-stack>
           <s-stack direction="inline" gap="base" justifyContent="space-between">
             <s-text color="subdued" type="small">Powered by Kablet</s-text>
-            {/* TODO: target="_blank" on s-link — not confirmed in official 2026-07 docs. Leaving unchanged. */}
             <s-link href="https://kablet.com/privacy/" target="_blank">
               <s-text color="subdued" type="small">Privacy</s-text>
             </s-link>
@@ -186,15 +334,10 @@ function App() {
     </s-section>
   )
 
-  /* ── Skeleton ──
-     Uses identical outer s-section + s-box wrapper as the offer card.
-     Every row mirrors the real card row for row to prevent layout shift.
-  ── */
+  // ── Skeleton (same for all templates) ─────────────────────────
   if (!opportunity) return (
     <s-section>
       <s-box border="base" borderRadius="base">
-
-        {/* Header row */}
         <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between" padding="base">
           <s-stack direction="inline" gap="small" alignItems="center">
             <s-box minInlineSize="20px" minBlockSize="20px" background="subdued" borderRadius="base" />
@@ -205,12 +348,8 @@ function App() {
           </s-stack>
           <s-box minInlineSize="56px" minBlockSize="24px" background="subdued" borderRadius="base" />
         </s-stack>
-
         <s-divider />
-
         <s-stack direction="block" gap="base" padding="base">
-
-          {/* Product row */}
           <s-stack direction="inline" gap="base" alignItems="start">
             <s-box minInlineSize="80px" maxInlineSize="80px" minBlockSize="80px" background="subdued" borderRadius="base" />
             <s-stack direction="block" gap="small">
@@ -219,163 +358,216 @@ function App() {
               <s-skeleton-paragraph lines={1} />
             </s-stack>
           </s-stack>
-
-          {/* Value proposition block */}
           <s-box background="subdued" borderRadius="base" padding="small">
             <s-skeleton-paragraph lines={2} />
           </s-box>
-
-          {/* Delivery bar */}
-          <s-box background="subdued" borderRadius="base" padding="small">
-            <s-skeleton-paragraph lines={1} />
-          </s-box>
-
-          {/* Pills row */}
           <s-stack direction="inline" gap="small">
             <s-box minInlineSize="100px" minBlockSize="28px" background="subdued" borderRadius="base" />
             <s-box minInlineSize="100px" minBlockSize="28px" background="subdued" borderRadius="base" />
-            <s-box minInlineSize="100px" minBlockSize="28px" background="subdued" borderRadius="base" />
           </s-stack>
-
           <s-divider />
-
-          {/* Primary CTA placeholder */}
           <s-box minBlockSize="44px" background="subdued" borderRadius="base" />
-
-          {/* Secondary CTA placeholder */}
           <s-box minBlockSize="38px" background="subdued" borderRadius="base" />
-
-          {/* Footer row */}
           <s-stack direction="inline" gap="base" justifyContent="space-between">
             <s-box minInlineSize="100px" minBlockSize="16px" background="subdued" borderRadius="base" />
             <s-box minInlineSize="40px" minBlockSize="16px" background="subdued" borderRadius="base" />
           </s-stack>
-
-          {/* Waiting state */}
           {showHint && (
             <s-stack direction="inline" justifyContent="center">
               <s-text color="subdued" type="small">Personalising your offer…</s-text>
             </s-stack>
           )}
-
         </s-stack>
       </s-box>
     </s-section>
   )
 
-  /* ── Offer card ── */
+  // ── Offer card — template-aware rendering ─────────────────────
   const o = opportunity
+  const tmpl = o.template ?? 'PHYSICAL_PRODUCT'
+  const cfg = TEMPLATE_CONFIG[tmpl] ?? TEMPLATE_CONFIG.PHYSICAL_PRODUCT
   const currency = o.currency || 'AED'
-  const pills = o.valueBullets?.slice(0, 3) ?? ['Ships separately', 'Cash on Delivery', 'Easy returns']
-  const delivery = o.deliveryNote || 'Next-day delivery — shipped separately, free'
-  const ctaLabel = o.ctaLabel || 'Add to my order'
+  const pills = o.valueBullets?.length > 0 ? o.valueBullets.slice(0, 3) : cfg.defaultPills
+  const ctaLabel = o.ctaLabel || cfg.defaultCta
   const discountPct = o.price && o.priceWas
     ? Math.round((1 - parseFloat(o.price) / parseFloat(o.priceWas)) * 100)
     : null
 
   return (
     <s-section>
-      {/* VERIFIED card container:
-          - s-section = official card semantic equivalent (Polaris docs)
-          - s-box border="base" borderRadius="base" = verified props from s-stack/s-box docs,
-            produces a visible card border on all themes regardless of merchant branding */}
       <s-box border="base" borderRadius="base">
 
-        {/* ── Header ── */}
+        {/* ── Header — varies by template label/icon ── */}
         <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between" padding="base">
           <s-stack direction="inline" gap="small" alignItems="center">
-            {/* TODO: "gift" — not in published icon subset. Leaving unchanged. */}
-            <s-icon type="gift" size="small" />
+            <s-icon type={cfg.icon} size="small" />
             <s-stack direction="block" gap="none">
-              <s-text color="subdued" type="small">Just for you</s-text>
-              {/* TODO: emphasis="bold" — not confirmed in official 2026-07 s-text props. Leaving unchanged. */}
-              <s-text emphasis="bold">Add to your order</s-text>
+              <s-text color="subdued" type="small">{cfg.headerSub}</s-text>
+              <s-text emphasis="bold">{cfg.headerLabel}</s-text>
             </s-stack>
           </s-stack>
-          {countdown && <s-badge tone="critical">{countdown}</s-badge>}
+          {countdown && <s-badge tone={cfg.badgeTone as any}>{countdown}</s-badge>}
         </s-stack>
 
         <s-divider />
 
         <s-stack direction="block" gap="base" padding="base">
 
-          {/* ── Product row ── */}
-          <s-stack direction="inline" gap="base" alignItems="start">
-            <s-box minInlineSize="80px" maxInlineSize="80px">
-              {o.visualAssetUrl
-                ? <s-image
-                    src={o.visualAssetUrl}
-                    alt={o.headline}
-                    aspectRatio="1/1"
-                    objectFit="cover"
-                    borderRadius="base"
-                    inlineSize="fill"
-                  />
-                : <s-box minInlineSize="80px" minBlockSize="80px" background="subdued" borderRadius="base" />
-              }
-            </s-box>
-            <s-stack direction="block" gap="small">
-              <s-heading level="2">{o.headline}</s-heading>
-              <s-text color="subdued" type="small">{o.description}</s-text>
-              <s-stack direction="inline" gap="small" alignItems="center">
-                {o.price && (
-                  <s-text emphasis="bold" size="large">{currency} {formatPrice(o.price)}</s-text>
-                )}
-                {o.priceWas && (
-                  <s-text color="subdued" type="small">
-                    {currency} {formatPrice(o.priceWas)}
-                  </s-text>
-                )}
-                {discountPct && discountPct > 0 && (
-                  <s-badge tone="success">Save {discountPct}%</s-badge>
+          {/* ── PHYSICAL_PRODUCT / TRAVEL / ENTERTAINMENT / DIGITAL / SUBSCRIPTION ──
+              Image-based layout: image left, content right */}
+          {cfg.showImage && o.visualAssetUrl && (
+            <s-stack direction="inline" gap="base" alignItems="start">
+              <s-box minInlineSize="80px" maxInlineSize="80px">
+                <s-image
+                  src={o.visualAssetUrl}
+                  alt={o.headline}
+                  aspectRatio="1/1"
+                  objectFit="cover"
+                  borderRadius="base"
+                  inlineSize="fill"
+                />
+              </s-box>
+              <s-stack direction="block" gap="small">
+                <s-heading level="2">{o.headline}</s-heading>
+                <s-text color="subdued" type="small">{o.description}</s-text>
+                {cfg.showPrice && o.price && (
+                  <s-stack direction="inline" gap="small" alignItems="center">
+                    <s-text emphasis="bold" size="large">{currency} {formatPrice(o.price)}</s-text>
+                    {o.priceWas && (
+                      <s-text color="subdued" type="small">{currency} {formatPrice(o.priceWas)}</s-text>
+                    )}
+                    {discountPct && discountPct > 0 && (
+                      <s-badge tone="success">Save {discountPct}%</s-badge>
+                    )}
+                  </s-stack>
                 )}
               </s-stack>
             </s-stack>
-          </s-stack>
+          )}
 
-          {/* ── Value proposition ── */}
-          {o.valueProposition && (
+          {/* ── REWARD / CASHBACK ──
+              Big value front and center, no image */}
+          {(tmpl === 'REWARD' || tmpl === 'CASHBACK') && (
+            <s-stack direction="block" gap="small" alignItems="center">
+              <s-box background="subdued" borderRadius="base" padding="base" inlineSize="fill">
+                <s-stack direction="block" gap="small" alignItems="center">
+                  <s-text emphasis="bold" size="large">{o.headline}</s-text>
+                  <s-text color="subdued" type="small">{o.description}</s-text>
+                  {o.valueProposition && (
+                    <s-badge tone={cfg.accentTone as any}>{o.valueProposition}</s-badge>
+                  )}
+                </s-stack>
+              </s-box>
+            </s-stack>
+          )}
+
+          {/* ── COUPON ──
+              Code-style display, prominent discount */}
+          {tmpl === 'COUPON' && (
+            <s-stack direction="block" gap="base">
+              <s-stack direction="block" gap="small">
+                <s-heading level="2">{o.headline}</s-heading>
+                <s-text color="subdued" type="small">{o.description}</s-text>
+              </s-stack>
+              {o.valueProposition && (
+                <s-box background="subdued" borderRadius="base" padding="base">
+                  <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+                    <s-text emphasis="bold">{o.valueProposition}</s-text>
+                    <s-badge tone="critical">Limited offer</s-badge>
+                  </s-stack>
+                </s-box>
+              )}
+            </s-stack>
+          )}
+
+          {/* ── INSURANCE ──
+              Trust-first: headline, description, price, no image */}
+          {tmpl === 'INSURANCE' && (
+            <s-stack direction="block" gap="small">
+              <s-heading level="2">{o.headline}</s-heading>
+              <s-text color="subdued" type="small">{o.description}</s-text>
+              {cfg.showPrice && o.price && (
+                <s-stack direction="inline" gap="small" alignItems="center">
+                  <s-badge tone="success">Only {currency} {formatPrice(o.price)}</s-badge>
+                </s-stack>
+              )}
+            </s-stack>
+          )}
+
+          {/* ── FINANCIAL ──
+              Minimal, trust-focused, no image, no price */}
+          {tmpl === 'FINANCIAL' && (
+            <s-stack direction="block" gap="small">
+              <s-heading level="2">{o.headline}</s-heading>
+              <s-text color="subdued" type="small">{o.description}</s-text>
+            </s-stack>
+          )}
+
+          {/* ── No-image fallback for templates that hide image but have content ── */}
+          {!cfg.showImage && tmpl !== 'REWARD' && tmpl !== 'CASHBACK' && tmpl !== 'COUPON' && tmpl !== 'INSURANCE' && tmpl !== 'FINANCIAL' && (
+            <s-stack direction="block" gap="small">
+              <s-heading level="2">{o.headline}</s-heading>
+              <s-text color="subdued" type="small">{o.description}</s-text>
+            </s-stack>
+          )}
+
+          {/* ── Value proposition block (shown for most templates) ── */}
+          {o.valueProposition && tmpl !== 'REWARD' && tmpl !== 'CASHBACK' && tmpl !== 'COUPON' && (
             <s-box background="subdued" borderRadius="base" padding="small">
               <s-text color="subdued" type="small">{o.valueProposition}</s-text>
             </s-box>
           )}
 
-          {/* ── Delivery bar ── */}
-          <s-box background="subdued" borderRadius="base" padding="small">
-            <s-stack direction="inline" gap="small" alignItems="center">
-              <s-icon type="delivery" size="small" tone="success" />
-              {/* TODO: emphasis="bold" — not confirmed. Leaving unchanged. */}
-              {/* TODO: type="small" — not confirmed. Leaving unchanged. */}
-              <s-text emphasis="bold" type="small">{delivery}</s-text>
-            </s-stack>
-          </s-box>
+          {/* ── Delivery bar (only PHYSICAL_PRODUCT) ── */}
+          {cfg.showDelivery && (
+            <s-box background="subdued" borderRadius="base" padding="small">
+              <s-stack direction="inline" gap="small" alignItems="center">
+                <s-icon type="delivery" size="small" tone="success" />
+                <s-text emphasis="bold" type="small">
+                  {o.deliveryNote || 'Next-day delivery — shipped separately, free'}
+                </s-text>
+              </s-stack>
+            </s-box>
+          )}
+
+          {/* ── Social proof (shown when available, all templates) ── */}
+          {o.socialProof && (
+            <s-box background="subdued" borderRadius="base" padding="small">
+              <s-stack direction="inline" gap="small" alignItems="center">
+                <s-icon type="star" size="small" tone="warning" />
+                <s-text color="subdued" type="small">{o.socialProof}</s-text>
+              </s-stack>
+            </s-box>
+          )}
 
           {/* ── Pills ── */}
           <s-stack direction="inline" gap="small">
-            {pills.map((pill, i) => (
+            {pills.map((pill: string, i: number) => (
               <s-badge key={i} tone="neutral">{pill}</s-badge>
             ))}
           </s-stack>
 
           <s-divider />
 
-          {/* ── CTAs ──
-              VERIFIED: inlineSize="fill" on s-button makes it full-width.
-              Source: official s-button docs — "The button takes up 100% of the available inline size." */}
+          {/* ── CTAs (same structure, label changes per template) ── */}
           <s-stack direction="block" gap="small">
-            <s-button variant="primary" inlineSize="fill" loading={loading} onClick={() => respond('ACCEPTED')}>
+            <s-button
+              variant="primary"
+              inlineSize="fill"
+              loading={loading}
+              onClick={() => respond('ACCEPTED')}
+            >
               {ctaLabel}
             </s-button>
             <s-button variant="secondary" inlineSize="fill" onClick={() => respond('DECLINED')}>
-              Skip
+              {tmpl === 'INSURANCE' ? 'No thanks' : tmpl === 'FINANCIAL' ? 'Maybe later' : 'Skip'}
             </s-button>
           </s-stack>
 
           {/* ── Error ── */}
           {error && (
             <s-banner tone="critical">
-              {/* TODO: type="small" — not confirmed. Leaving unchanged. */}
-              <s-text type="small">Couldn't add the item. Please try again.</s-text>
+              <s-text type="small">Couldn't process your request. Please try again.</s-text>
             </s-banner>
           )}
 

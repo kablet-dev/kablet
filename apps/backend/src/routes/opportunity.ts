@@ -59,7 +59,7 @@ fastify.get('/opportunity/decision', async (request, reply) => {
       .eq('transaction_event_id', event.id)
       .single(),
     db.from('opportunity_definitions')
-      .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating')
+      .select('headline, description, value_proposition, visual_asset_url, cta_label, value_bullets, social_proof, trust_rating, template, shopify_product_price')
       .eq('id', decision.selected_definition_id!)
       .single()
   ])
@@ -89,6 +89,7 @@ if (instance.current_state === 'SELECTED') {
   return reply.send({
     opportunity: {
       instanceId: instance.id,
+      template: definition.template ?? 'PHYSICAL_PRODUCT',
       headline: definition.headline,
       description: definition.description,
       valueProposition: definition.value_proposition,
@@ -97,6 +98,7 @@ if (instance.current_state === 'SELECTED') {
       valueBullets: definition.value_bullets ?? [],
       socialProof: definition.social_proof ?? null,
       trustRating: definition.trust_rating ?? null,
+      price: definition.shopify_product_price ? String(definition.shopify_product_price) : null,
     }
   })
 })
