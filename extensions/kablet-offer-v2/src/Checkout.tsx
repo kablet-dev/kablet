@@ -229,10 +229,11 @@ function App() {
     const oc = shopify?.orderConfirmation
     if (!oc) return
     const tryGet = (val: any) => {
-      const id = val?.order?.id?.toString().split('/').pop()
-      if (id) fetchOffer(id)
-    }
-    if (oc.current?.order?.id) { tryGet(oc.current); return }
+  const id = val?.order?.id?.toString().split('/').pop()
+  if (id && id !== '0') fetchOffer(id)
+}
+    const currentId = oc.current?.order?.id?.toString().split('/').pop()
+if (currentId && currentId !== '0') { tryGet(oc.current); return }
     const unsub = oc.subscribe((val: any) => tryGet(val))
     return () => {
       if (abortRef.current) abortRef.current.abort()
