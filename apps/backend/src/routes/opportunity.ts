@@ -2,7 +2,24 @@ import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
 import { fetchShopifyOrder } from '../shopify.js'
 
+// ── Template header config (icon/label/subtitle per business type) ─
+const HEADER_CONFIG: Record<string, { icon: string; subtitle: string; label: string }> = {
+  PHYSICAL_PRODUCT: { icon: 'gift',     subtitle: 'Just for you',             label: 'Add to your order'        },
+  REWARD:           { icon: 'star',     subtitle: 'Exclusive for you',         label: "You've unlocked a reward" },
+  CASHBACK:         { icon: 'money',    subtitle: 'Money back in your pocket', label: 'Cashback offer'            },
+  COUPON:           { icon: 'discount', subtitle: 'Limited time offer',        label: 'Your exclusive coupon'     },
+  TRAVEL:           { icon: 'location', subtitle: 'Exclusive offer',           label: 'Travel upgrade for you'    },
+  INSURANCE:        { icon: 'security', subtitle: 'Peace of mind included',    label: 'Protect your order'        },
+  DIGITAL:          { icon: 'apps',     subtitle: 'Instant access',            label: 'Digital offer for you'     },
+  FINANCIAL:        { icon: 'bank',     subtitle: 'Tailored for you',          label: 'Financial offer'           },
+  ENTERTAINMENT:    { icon: 'play',     subtitle: 'Enjoy more',                label: 'Entertainment offer'       },
+  SUBSCRIPTION:     { icon: 'refresh',  subtitle: 'Special member rate',       label: 'Subscription offer'        },
+}
+
 // ── Shared helper to build opportunity response ───────────────────
+// Returns Opportunity Schema v1 — the public contract between backend
+// and all Kablet clients (widget, admin, future mobile SDKs).
+// Any breaking change requires incrementing schemaVersion.
 async function buildOpportunityResponse(
   instanceId: string,
   definitionId: string,
@@ -16,7 +33,7 @@ async function buildOpportunityResponse(
 
   if (!definition) return null
 
-  // Mark as PRESENTED in background
+  // Mark as PRESENTED in background — no change to business logic
   if (currentState === 'SELECTED') {
     db.from('opportunity_instances')
       .update({ current_state: 'PRESENTED' })
@@ -24,20 +41,80 @@ async function buildOpportunityResponse(
       .then(() => {})
   }
 
+  const type = (definition.template ?? 'PHYSICAL_PRODUCT') as string
+  const hdr = HEADER_CONFIG[type] ?? HEADER_CONFIG.PHYSICAL_PRODUCT
+
+  // ── Opportunity Schema v1 ─────────────────────────────────────────
   return {
-    instanceId,
-    template: definition.template ?? 'PHYSICAL_PRODUCT',
-    headline: definition.headline,
-    description: definition.description,
-    valueProposition: definition.value_proposition,
-    visualAssetUrl: definition.visual_asset_url,
-    ctaLabel: definition.cta_label,
-    valueBullets: definition.value_bullets ?? [],
-    socialProof: definition.social_proof ?? null,
-    trustRating: definition.trust_rating ?? null,
-    price: definition.shopify_product_price
-      ? String(definition.shopify_product_price)
-      : null,
+    schemaVersion: 1,
+
+    identity: {
+      instanceId,
+      definitionId,
+      providerId: null,
+    },
+
+    metadata: {
+      type:       type.toLowerCase(),
+      vertical:   null,
+      campaignId: null,
+      priority:   null,
+      locale:     'en',
+      expiry:     null,
+      tracking:   {},
+    },
+
+    rendering: {
+      layout: 'standard',
+    },
+
+    regions: {
+      header: {
+        badge:    null,
+        icon:     hdr.icon,
+        subtitle: hdr.subtitle,
+        title:    hdr.label,
+      },
+
+      media: definition.visual_asset_url
+        ? { src: definition.visual_asset_url, alt: definition.headline, aspectRatio: '1/1', fit: 'cover' }
+        : null,
+
+      content: {
+        headline:    definition.headline,
+        description: definition.description,
+      },
+
+      value: definition.shopify_product_price
+        ? { type: 'price', amount: String(definition.shopify_product_price), currency: 'AED', label: definition.value_proposition ?? null }
+        : (definition.value_proposition
+          ? { type: 'label', amount: null, currency: null, label: definition.value_proposition }
+          : null),
+
+      benefits: definition.value_bullets?.length
+        ? { attributes: definition.value_bullets }
+        : null,
+
+      socialProof: definition.social_proof
+        ? { type: 'purchases', value: definition.trust_rating ? String(definition.trust_rating) : null, label: definition.social_proof }
+        : null,
+
+      trust: null,
+
+      actions: {
+        actions: [
+          { label: definition.cta_label, style: 'primary',   actionType: 'accept'  },
+          { label: 'No thanks',          style: 'secondary', actionType: 'decline' },
+        ],
+      },
+
+      disclosure: {
+        poweredBy: 'Kablet',
+        privacy:   'https://kablet.com/privacy/',
+        terms:     null,
+        whySeeing: null,
+      },
+    },
   }
 }
 
