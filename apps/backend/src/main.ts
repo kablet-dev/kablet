@@ -25,7 +25,6 @@ await server.register(cors, {
     /\.shopify\.com$/,
     /\.shopifycdn\.com$/,
     /\.netlify\.app$/,
-    /.*/,  // WooCommerce stores - tighten per domain after testing
   ],
   credentials: true,
 })

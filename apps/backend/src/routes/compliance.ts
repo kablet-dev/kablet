@@ -31,6 +31,8 @@ export async function complianceRoutes(fastify: FastifyInstance) {
       customerId: payload.customer?.id,
     }, 'Customer data request received')
 
+    // Shopify requires acknowledging data requests — actual data export
+    // is handled manually per your privacy policy
     return reply.status(200).send()
   })
 
@@ -68,10 +70,25 @@ export async function complianceRoutes(fastify: FastifyInstance) {
     if (!verifyCompliance(request, reply)) return
 
     const payload = request.body as any
-    fastify.log.info({
-      shop: payload.shop_domain,
-      customerId: payload.customer?.id,
-    }, 'Customer redact request received')
+    const shopDomain = payload.shop_domain
+    const customerId = payload.customer?.id?.toString()
+
+    fastify.log.info({ shop: shopDomain, customerId }, 'Customer redact request received')
+
+    if (shopDomain && customerId) {
+      // Redact PII from opportunity_instances for this customer
+      await db
+        .from('opportunity_instances')
+        .update({
+          customer_name: null,
+          customer_email: null,
+          customer_phone: null,
+          shipping_address: null,
+        })
+        .eq('customer_reference', customerId)
+
+      fastify.log.info({ shop: shopDomain, customerId }, 'Customer PII redacted')
+    }
 
     return reply.status(200).send()
   })
@@ -80,9 +97,32 @@ export async function complianceRoutes(fastify: FastifyInstance) {
     if (!verifyCompliance(request, reply)) return
 
     const payload = request.body as any
-    fastify.log.info({
-      shop: payload.shop_domain,
-    }, 'Shop redact request received')
+    const shopDomain = payload.domain ?? payload.shop_domain
+
+    fastify.log.info({ shopDomain }, 'Shop redact request received')
+
+    if (shopDomain) {
+      const { data: merchant } = await db
+        .from('merchants')
+        .select('id')
+        .eq('shopify_shop_domain', shopDomain)
+        .single()
+
+      if (merchant) {
+        // Redact all customer PII for this shop
+        await db
+          .from('opportunity_instances')
+          .update({
+            customer_name: null,
+            customer_email: null,
+            customer_phone: null,
+            shipping_address: null,
+          })
+          .eq('merchant_id', merchant.id)
+
+        fastify.log.info({ shopDomain }, 'Shop customer PII redacted')
+      }
+    }
 
     return reply.status(200).send()
   })
