@@ -17,6 +17,20 @@ function formatPrice(value: string): string {
   return new Intl.NumberFormat('en-AE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(parseFloat(value))
 }
 
+// Template-aware header config
+const HEADER: Record<string, { icon: string; sub: string; label: string }> = {
+  PHYSICAL_PRODUCT: { icon: 'gift',     sub: 'Just for you',              label: 'Add to your order'       },
+  REWARD:           { icon: 'star',     sub: 'Exclusive for you',          label: "You've unlocked a reward" },
+  CASHBACK:         { icon: 'money',    sub: 'Money back in your pocket',  label: 'Cashback offer'           },
+  COUPON:           { icon: 'discount', sub: 'Limited time offer',         label: 'Your exclusive coupon'    },
+  TRAVEL:           { icon: 'location', sub: 'Exclusive offer',            label: 'Travel upgrade for you'   },
+  INSURANCE:        { icon: 'security', sub: 'Peace of mind included',     label: 'Protect your order'       },
+  DIGITAL:          { icon: 'apps',     sub: 'Instant access',             label: 'Digital offer for you'    },
+  FINANCIAL:        { icon: 'bank',     sub: 'Tailored for you',           label: 'Financial offer'          },
+  ENTERTAINMENT:    { icon: 'play',     sub: 'Enjoy more',                 label: 'Entertainment offer'      },
+  SUBSCRIPTION:     { icon: 'refresh',  sub: 'Special member rate',        label: 'Subscription offer'       },
+}
+
 export default function () {
   render(<App />, document.body)
 }
@@ -87,7 +101,6 @@ function App() {
 
   if (done || noOffer) return null
 
-  // Success state
   if (accepted) return (
     <s-section>
       <s-box border="base" borderRadius="base" padding="base">
@@ -95,9 +108,21 @@ function App() {
           <s-stack direction="inline" gap="base" alignItems="center">
             <s-icon type="check-circle" tone="success" size="large" />
             <s-stack direction="block" gap="none">
-              <s-heading level="2">Added to your order!</s-heading>
+              <s-heading level="2">
+                {offer?.template === 'REWARD' || offer?.template === 'CASHBACK'
+                  ? 'Reward claimed!'
+                  : offer?.template === 'COUPON'
+                  ? 'Coupon activated!'
+                  : offer?.template === 'INSURANCE'
+                  ? 'Protection added!'
+                  : 'Added to your order!'}
+              </s-heading>
               <s-text color="subdued" type="small">
-                {offer?.deliveryNote ?? 'Your item will be delivered separately.'}
+                {offer?.template === 'DIGITAL'
+                  ? 'Check your email for access details.'
+                  : offer?.template === 'FINANCIAL'
+                  ? "We'll be in touch shortly."
+                  : offer?.deliveryNote ?? 'Your item will be delivered separately.'}
               </s-text>
             </s-stack>
           </s-stack>
@@ -129,23 +154,23 @@ function App() {
 
   const currency = offer.currency || 'AED'
   const pills = offer.valueBullets?.length > 0 ? offer.valueBullets.slice(0, 3) : []
+  const hdr = HEADER[offer.template] ?? HEADER.PHYSICAL_PRODUCT
 
   return (
     <s-section>
       <s-box border="base" borderRadius="base">
 
-        {/* Header */}
+        {/* Template-aware header */}
         <s-stack direction="inline" gap="small" alignItems="center" padding="base">
-          <s-icon type="gift" size="small" />
+          <s-icon type={hdr.icon} size="small" />
           <s-stack direction="block" gap="none">
-            <s-text color="subdued" type="small">Just for you</s-text>
-            <s-text emphasis="bold">Add to your order</s-text>
+            <s-text color="subdued" type="small">{hdr.sub}</s-text>
+            <s-text emphasis="bold">{hdr.label}</s-text>
           </s-stack>
         </s-stack>
 
         <s-divider />
 
-        {/* Body */}
         <s-stack direction="block" gap="base" padding="base">
 
           <s-stack direction="inline" gap="base" alignItems="start">
@@ -178,7 +203,6 @@ function App() {
             </s-stack>
           </s-stack>
 
-          {/* Social proof */}
           {offer.socialProof && (
             <s-box background="subdued" borderRadius="base" padding="small">
               <s-stack direction="inline" gap="small" alignItems="center">
@@ -188,7 +212,6 @@ function App() {
             </s-box>
           )}
 
-          {/* Pills */}
           {pills.length > 0 && (
             <s-stack direction="inline" gap="small">
               {pills.map((pill: string, i: number) => (
