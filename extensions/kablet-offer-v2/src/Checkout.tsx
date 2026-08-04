@@ -86,7 +86,7 @@ function ValueRegion({ data }: { data: any }) {
   if (!data) return null
   if (data.amount) {
     return (
-      <s-stack direction="inline" gap="small" alignItems="center">
+      <s-stack direction="block" gap="none">
         <s-text emphasis="bold" size="large">
           {data.currency} {formatPrice(data.amount)}
         </s-text>
