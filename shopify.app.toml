@@ -1,31 +1,34 @@
-name = "Kablet"
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
 client_id = "468a9b31e9ad02a319dbc3b88d6b4039"
+name = "Kablet"
 application_url = "https://kablet-backend.onrender.com/app"
 embedded = true
 
-[access_scopes]
-scopes = "read_orders,write_orders,read_draft_orders,write_draft_orders,read_products"
-
-[auth]
-redirect_urls = ["https://kablet-backend.onrender.com/auth/callback"]
+[build]
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2026-07"
 
   [[webhooks.subscriptions]]
-  topics = ["orders/create"]
-  uri = "https://kablet-backend.onrender.com/webhook/shopify/order"
-
-  [[webhooks.subscriptions]]
-  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
-  uri = "https://kablet-backend.onrender.com/webhooks/customers/data_request"
-
-  [[webhooks.subscriptions]]
-  topics = ["app/uninstalled"]
   uri = "https://kablet-backend.onrender.com/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://kablet-backend.onrender.com/webhook/shopify/order"
+  topics = [ "orders/create" ]
+
+  [[webhooks.subscriptions]]
+  uri = "https://kablet-backend.onrender.com/webhooks/customers/data_request"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_draft_orders,read_orders,read_products,write_draft_orders,write_orders"
+
+[auth]
+redirect_urls = [ "https://kablet-backend.onrender.com/auth/callback" ]
 
 [pos]
 embedded = false
-
-[build]
-automatically_update_urls_on_dev = true

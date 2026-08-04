@@ -1,1 +1,63 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0a0a0f;
+  --color-ink-900: #111118;
+  --color-ink-800: #1a1a24;
+  --color-ink-700: #24242f;
+  --color-ink-600: #32323f;
+  --color-ink-500: #4a4a5a;
+  --color-ink-400: #6b6b7e;
+  --color-ink-300: #9898aa;
+  --color-ink-200: #c4c4cf;
+  --color-ink-100: #e8e8ed;
+  --color-ink-50: #f5f5f8;
+
+  --color-accent-600: #5b45d4;
+  --color-accent-500: #6f57e8;
+  --color-accent-400: #8a76ef;
+  --color-accent-300: #a897f4;
+  --color-accent-100: #ede9fc;
+  --color-accent-50: #f5f3fe;
+
+  --color-success-600: #15803d;
+  --color-success-500: #16a34a;
+  --color-success-100: #dcfce7;
+  --color-success-50: #f0fdf4;
+
+  --color-warning-500: #d97706;
+  --color-warning-100: #fef3c7;
+
+  --color-danger-500: #dc2626;
+  --color-danger-100: #fee2e2;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-card: 12px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-ink-50);
+  color: var(--color-ink-900);
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-ink-200); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-300); }

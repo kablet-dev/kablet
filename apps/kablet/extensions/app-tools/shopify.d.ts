@@ -97,18 +97,19 @@ declare module './src/index.js' {
       handler: (
         input: ListFaqsInput,
       ) => ListFaqsOutput | Promise<ListFaqsOutput>,
-    ): void;
+    ): () => void;
     /**
      * Get a single FAQ entry by ID
      */
     register(
       name: 'get_faq',
       handler: (input: GetFaqInput) => GetFaqOutput | Promise<GetFaqOutput>,
-    ): void;
+    ): () => void;
   }
 
-  const shopify: import('@shopify/ui-extensions/admin.app.tools.data').Api & {
-    tools: ShopifyTools;
-  };
+  const shopify: import('@shopify/ui-extensions/admin').WithGeneratedTools<
+    import('@shopify/ui-extensions/admin.app.tools.data').Api,
+    ShopifyTools
+  >;
   const globalThis: { shopify: typeof shopify };
 }

@@ -1,7 +1,7 @@
 {
   "name": "kablet-offer-v2",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.8",
   "license": "UNLICENSED",
   "dependencies": {
     "@preact/signals": "^2.10.1",
