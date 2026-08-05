@@ -2,10 +2,86 @@ import { db } from './db.js'
 import type {
   TransactionEvent,
   OpportunityDefinition,
-  EligibilityResult
+  EligibilityResult,
 } from './types.js'
 
-// ── Eligibility ────────────────────────────────────────────────────────
+// ── Engine Config ──────────────────────────────────────────────────────
+// Reads the single engine_config row. Falls back to safe defaults if missing.
+
+interface EngineSettings {
+  engine: { enabled: boolean; mode: 'live' | 'shadow' | 'dry_run' }
+  scoring: { priority_weight: number; ai_weight: number }
+  ai: { enabled: boolean; provider: string | null }
+  safety: { max_offers_per_customer_per_day: number }
+  features: { experiments: boolean; budgets: boolean; ai_scoring: boolean }
+}
+
+const DEFAULT_SETTINGS: EngineSettings = {
+  engine:  { enabled: true, mode: 'live' },
+  scoring: { priority_weight: 1.0, ai_weight: 0.0 },
+  ai:      { enabled: false, provider: null },
+  safety:  { max_offers_per_customer_per_day: 3 },
+  features:{ experiments: false, budgets: false, ai_scoring: false },
+}
+
+async function getEngineConfig(): Promise<EngineSettings> {
+  const { data } = await db
+    .from('engine_config')
+    .select('settings')
+    .limit(1)
+    .single()
+  return (data?.settings as EngineSettings) ?? DEFAULT_SETTINGS
+}
+
+// ── Pipeline Types ─────────────────────────────────────────────────────
+// Each stage returns structured data so the full trace is always available
+// for debugging, analytics, and future decision-inspection tools.
+
+interface EligibilityStageResult {
+  eligible: OpportunityDefinition[]
+  trace: EligibilityResult[]
+}
+
+interface ScoringResult {
+  definition: OpportunityDefinition
+  baseScore: number
+  aiScore: number
+  finalScore: number
+}
+
+interface RankingResult {
+  winner: OpportunityDefinition
+  winnerScore: number
+  ranked: ScoringResult[]
+}
+
+export interface DecisionTrace {
+  candidates:    OpportunityDefinition[]
+  eligibility:   EligibilityResult[]
+  scores:        ScoringResult[]
+  winner:        OpportunityDefinition | null
+  winnerScore:   number | null
+  outcomeType:   'OPPORTUNITY_IDENTIFIED' | 'NO_ELIGIBLE_OPPORTUNITIES' | 'CATALOG_EMPTY'
+}
+
+// ── Stage 1: Candidate Provider ────────────────────────────────────────
+// Fetches all active opportunity definitions.
+// Future: filter by campaign budgets, schedules, merchant targeting.
+
+async function fetchCandidates(): Promise<OpportunityDefinition[]> {
+  const { data, error } = await db
+    .from('opportunity_definitions')
+    .select('*')
+    .eq('lifecycle_state', 'ACTIVE')
+    .order('base_priority', { ascending: true })
+
+  if (error) throw new Error(`CandidateProvider failed: ${error.message}`)
+  return data ?? []
+}
+
+// ── Stage 2: Eligibility Provider ─────────────────────────────────────
+// Evaluates each candidate against the transaction event.
+// Future: add merchant overrides, frequency limits, budget checks.
 
 function evaluateEligibility(
   def: OpportunityDefinition,
@@ -15,7 +91,7 @@ function evaluateEligibility(
     return {
       definitionId: def.id,
       passed: false,
-      failedReason: `geography_mismatch: required ${def.required_geography}, got ${event.transaction_geography}`
+      failedReason: `geography_mismatch: required ${def.required_geography}, got ${event.transaction_geography}`,
     }
   }
 
@@ -26,7 +102,7 @@ function evaluateEligibility(
     return {
       definitionId: def.id,
       passed: false,
-      failedReason: `below_min_value: required ${def.min_transaction_value}, got ${event.transaction_value}`
+      failedReason: `below_min_value: required ${def.min_transaction_value}, got ${event.transaction_value}`,
     }
   }
 
@@ -37,7 +113,7 @@ function evaluateEligibility(
     return {
       definitionId: def.id,
       passed: false,
-      failedReason: `transaction_type_mismatch: required ${def.required_transaction_type}, got ${event.transaction_type}`
+      failedReason: `transaction_type_mismatch: required ${def.required_transaction_type}, got ${event.transaction_type}`,
     }
   }
 
@@ -45,127 +121,160 @@ function evaluateEligibility(
     return {
       definitionId: def.id,
       passed: false,
-      failedReason: 'no_shipping_address'
+      failedReason: 'no_shipping_address',
     }
   }
 
   return { definitionId: def.id, passed: true }
 }
 
-// ── Scoring ────────────────────────────────────────────────────────────
+function runEligibility(
+  candidates: OpportunityDefinition[],
+  event: TransactionEvent
+): EligibilityStageResult {
+  const trace = candidates.map(def => evaluateEligibility(def, event))
+  const eligible = candidates.filter(
+    def => trace.find(r => r.definitionId === def.id)?.passed === true
+  )
+  return { eligible, trace }
+}
 
-function computeScore(def: OpportunityDefinition): number {
+// ── Stage 3: Scoring Provider ──────────────────────────────────────────
+// Computes a score for each eligible candidate.
+// AI plugs in here later — no engine rewrite needed.
+// Combined score = (baseScore * priority_weight) + (aiScore * ai_weight)
+
+function computeBaseScore(def: OpportunityDefinition): number {
   return 1000 - def.base_priority
 }
 
-// ── Persistence ────────────────────────────────────────────────────────
+// AI provider interface — implement and swap without touching the engine
+// interface AIProvider {
+//   score(event: TransactionEvent, def: OpportunityDefinition): Promise<number>
+// }
+
+function runScoring(
+  eligible: OpportunityDefinition[],
+  config: EngineSettings
+): ScoringResult[] {
+  return eligible.map(def => {
+    const baseScore  = computeBaseScore(def)
+    const aiScore    = 0 // future: await aiProvider.score(event, def)
+    const finalScore =
+      baseScore * config.scoring.priority_weight +
+      aiScore   * config.scoring.ai_weight
+    return { definition: def, baseScore, aiScore, finalScore }
+  })
+}
+
+// ── Stage 4: Ranking Provider ──────────────────────────────────────────
+// Sorts scored candidates and returns the winner.
+// Future: experiment engine selects variant here instead of top score.
+
+function runRanking(scored: ScoringResult[]): RankingResult {
+  const ranked = [...scored].sort((a, b) => {
+    if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore
+    return a.definition.id.localeCompare(b.definition.id) // deterministic tiebreak
+  })
+  return {
+    winner:      ranked[0].definition,
+    winnerScore: ranked[0].finalScore,
+    ranked,
+  }
+}
+
+// ── Stage 5: Persistence Provider ─────────────────────────────────────
+// Writes decision record and creates opportunity instance.
+// Unchanged behavior — same DB schema as before.
 
 async function persistDecision(
   event: TransactionEvent,
-  outcomeType: 'OPPORTUNITY_IDENTIFIED' | 'NO_ELIGIBLE_OPPORTUNITIES' | 'CATALOG_EMPTY',
-  winner: OpportunityDefinition | null,
-  trace: EligibilityResult[],
-  candidatesEvaluated: number,
-  selectedScore: number | null
-): Promise<string> {
+  trace: DecisionTrace
+): Promise<void> {
   const { data, error } = await db
     .from('decision_records')
     .insert({
-      transaction_event_id: event.id,
-      merchant_id: event.merchant_id,
-      outcome_type: outcomeType,
-      selected_definition_id: winner?.id ?? null,
-      candidates_evaluated: candidatesEvaluated,
-      eligibility_trace: trace,
-      selected_score: selectedScore
+      transaction_event_id:    event.id,
+      merchant_id:             event.merchant_id,
+      outcome_type:            trace.outcomeType,
+      selected_definition_id:  trace.winner?.id ?? null,
+      candidates_evaluated:    trace.candidates.length,
+      eligibility_trace:       trace.eligibility,
+      selected_score:          trace.winnerScore,
     })
     .select('id')
     .single()
 
-  if (error) throw new Error(`Failed to persist decision: ${error.message}`)
-  return data.id
+  if (error) throw new Error(`PersistenceProvider failed: ${error.message}`)
+
+  if (trace.winner) {
+    const { error: instanceError } = await db
+      .from('opportunity_instances')
+      .insert({
+        decision_record_id:   data.id,
+        definition_id:        trace.winner.id,
+        transaction_event_id: event.id,
+        merchant_id:          event.merchant_id,
+        customer_reference:   event.customer_reference,
+        current_state:        'SELECTED',
+      })
+
+    if (instanceError) throw new Error(`Instance creation failed: ${instanceError.message}`)
+  }
 }
 
-async function createInstance(
-  event: TransactionEvent,
-  definition: OpportunityDefinition,
-  decisionRecordId: string
-): Promise<void> {
-  const { error } = await db.from('opportunity_instances').insert({
-    decision_record_id: decisionRecordId,
-    definition_id: definition.id,
-    transaction_event_id: event.id,
-    merchant_id: event.merchant_id,
-    customer_reference: event.customer_reference,
-    current_state: 'SELECTED'
-  })
-
-  if (error) throw new Error(`Failed to create instance: ${error.message}`)
-}
-
-// ── Public interface ───────────────────────────────────────────────────
+// ── Public Interface ───────────────────────────────────────────────────
+// The engine orchestrates the pipeline.
+// Returns the full DecisionTrace — available for debugging and analytics
+// without changing the engine.
 
 export async function processTransactionEvent(
   event: TransactionEvent
-): Promise<void> {
-  // 1. Fetch all active definitions
-  const { data: definitions, error } = await db
-    .from('opportunity_definitions')
-    .select('*')
-    .eq('lifecycle_state', 'ACTIVE')
-    .order('base_priority', { ascending: true })
+): Promise<DecisionTrace> {
+  const config = await getEngineConfig()
 
-  if (error) throw new Error(`Failed to fetch definitions: ${error.message}`)
+  // Stage 1: Candidates
+  const candidates = await fetchCandidates()
 
-  // 2. Handle empty catalog
-  if (!definitions || definitions.length === 0) {
-    await persistDecision(event, 'CATALOG_EMPTY', null, [], 0, null)
-    return
+  if (candidates.length === 0) {
+    const trace: DecisionTrace = {
+      candidates: [], eligibility: [], scores: [],
+      winner: null, winnerScore: null,
+      outcomeType: 'CATALOG_EMPTY',
+    }
+    await persistDecision(event, trace)
+    return trace
   }
 
-  // 3. Evaluate eligibility for every definition
-  const trace: EligibilityResult[] = definitions.map(def =>
-    evaluateEligibility(def, event)
-  )
+  // Stage 2: Eligibility
+  const { eligible, trace: eligibilityTrace } = runEligibility(candidates, event)
 
-  const eligible = definitions.filter(def =>
-    trace.find(r => r.definitionId === def.id)?.passed === true
-  )
-
-  // 4. Handle no eligible definitions
   if (eligible.length === 0) {
-    await persistDecision(
-      event,
-      'NO_ELIGIBLE_OPPORTUNITIES',
-      null,
-      trace,
-      definitions.length,
-      null
-    )
-    return
+    const trace: DecisionTrace = {
+      candidates, eligibility: eligibilityTrace, scores: [],
+      winner: null, winnerScore: null,
+      outcomeType: 'NO_ELIGIBLE_OPPORTUNITIES',
+    }
+    await persistDecision(event, trace)
+    return trace
   }
 
-  // 5. Score and rank eligible definitions
-  const ranked = eligible
-    .map(def => ({ definition: def, score: computeScore(def) }))
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score
-      // Deterministic tiebreaker
-      return a.definition.id.localeCompare(b.definition.id)
-    })
+  // Stage 3: Scoring
+  const scores = runScoring(eligible, config)
 
-  const winner = ranked[0].definition
-  const winnerScore = ranked[0].score
+  // Stage 4: Ranking
+  const { winner, winnerScore, ranked } = runRanking(scores)
 
-  // 6. Persist decision and create instance
-  const decisionId = await persistDecision(
-    event,
-    'OPPORTUNITY_IDENTIFIED',
+  // Stage 5: Persist
+  const trace: DecisionTrace = {
+    candidates,
+    eligibility: eligibilityTrace,
+    scores: ranked,
     winner,
-    trace,
-    definitions.length,
-    winnerScore
-  )
+    winnerScore,
+    outcomeType: 'OPPORTUNITY_IDENTIFIED',
+  }
+  await persistDecision(event, trace)
 
-  await createInstance(event, winner, decisionId)
+  return trace
 }

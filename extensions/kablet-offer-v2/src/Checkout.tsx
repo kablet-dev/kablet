@@ -8,11 +8,11 @@ declare const shopify: any
 
 // ── Layout region order ───────────────────────────────────────────
 const LAYOUTS: Record<string, string[]> = {
-  standard: ['header', 'media+content', 'value', 'benefits', 'socialProof', 'trust', 'actions', 'disclosure'],
+standard: ['header', 'media+content', 'socialProof', 'trust', 'actions', 'disclosure'],
   compact:  ['header', 'content', 'value', 'actions', 'disclosure'],
-  featured: ['header', 'media+content', 'value', 'benefits', 'socialProof', 'trust', 'actions', 'disclosure'],
-  banner:   ['header', 'media+content', 'value', 'benefits', 'socialProof', 'trust', 'actions', 'disclosure'],
-  carousel: ['header', 'media+content', 'value', 'benefits', 'socialProof', 'trust', 'actions', 'disclosure'],
+  featured: ['header', 'media+content', 'socialProof', 'trust', 'actions', 'disclosure'],
+  banner:   ['header', 'media+content', 'socialProof', 'trust', 'actions', 'disclosure'],
+  carousel: ['header', 'media+content', 'socialProof', 'trust', 'actions', 'disclosure'],
 }
 
 function extractOrderId(raw: any): string | null {
@@ -38,38 +38,52 @@ export default function () {
 function HeaderRegion({ data }: { data: any }) {
   return (
     <s-stack direction="inline" gap="small" alignItems="center" padding="base">
-      <s-icon type={data.icon} size="small" />
+      <s-icon type={data.icon} size="large" />
       <s-stack direction="block" gap="none">
-        <s-text color="subdued" type="small">{data.subtitle}</s-text>
         <s-text emphasis="bold">{data.title}</s-text>
+        <s-text color="subdued" type="small">{data.subtitle}</s-text>
       </s-stack>
       {data.badge && <s-badge tone="critical">{data.badge}</s-badge>}
     </s-stack>
   )
 }
 
-function MediaContentRegion({ media, content }: { media: any; content: any }) {
+function MediaContentRegion({ media, content, value, benefits }: { media: any; content: any; value: any; benefits: any }) {
+  console.log('MEDIA_REGION value:', JSON.stringify(value), 'benefits:', JSON.stringify(benefits))
   return (
-    <s-stack direction="inline" gap="base" alignItems="start">
+    <s-grid gridTemplateColumns="35% 1fr" gap="base" alignItems="start">
       {media && (
-        <s-box minInlineSize="80px" maxInlineSize="80px">
-          <s-image
-            src={media.src}
-            alt={media.alt}
-            aspectRatio={media.aspectRatio ?? '1/1'}
-            objectFit={media.fit ?? 'cover'}
-            borderRadius="base"
-            inlineSize="fill"
-          />
-        </s-box>
+        <s-image
+          src={media.src}
+          alt={media.alt}
+          aspectRatio={media.aspectRatio ?? '1/1'}
+          objectFit={media.fit ?? 'cover'}
+          borderRadius="base"
+          inlineSize="fill"
+        />
       )}
-      {content && (
-        <s-stack direction="block" gap="small">
-          <s-heading level="2">{content.headline}</s-heading>
-          <s-text color="subdued" type="small">{content.description}</s-text>
-        </s-stack>
-      )}
-    </s-stack>
+      <s-stack direction="block" gap="small">
+        {content && (
+          <>
+            <s-heading level="2">{content.headline}</s-heading>
+            <s-text color="subdued" type="small">{content.description}</s-text>
+          </>
+        )}
+        {value && value.amount && (
+          <s-stack direction="block" gap="none">
+            <s-text emphasis="bold" size="large">{value.currency} {formatPrice(value.amount)}</s-text>
+            {value.label && <s-text color="subdued" type="small">{value.label}</s-text>}
+          </s-stack>
+        )}
+        {benefits?.attributes?.length && (
+          <s-stack direction="inline" gap="small">
+            {benefits.attributes.slice(0, 3).map((attr: string, i: number) => (
+              <s-badge key={i} tone="neutral">{attr}</s-badge>
+            ))}
+          </s-stack>
+        )}
+      </s-stack>
+    </s-grid>
   )
 }
 
@@ -316,20 +330,20 @@ function App() {
           {regionOrder.map((region: string) => {
             switch (region) {
               case 'media+content':
-                if (!r?.media && !r?.content) return null
-                return <MediaContentRegion key={region} media={r.media} content={r.content} />
+  if (!r?.media && !r?.content) return null
+  return <MediaContentRegion key={region} media={r.media} content={r.content} value={r.value} benefits={r.benefits} />
 
               case 'content':
                 if (!r?.content) return null
                 return <ContentRegion key={region} data={r.content} />
 
               case 'value':
-                if (!r?.value) return null
-                return <ValueRegion key={region} data={r.value} />
+  if (!r?.value || r?.media || r?.content) return null
+  return <ValueRegion key={region} data={r.value} />
 
-              case 'benefits':
-                if (!r?.benefits) return null
-                return <BenefitsRegion key={region} data={r.benefits} />
+case 'benefits':
+  if (!r?.benefits || r?.media || r?.content) return null
+  return <BenefitsRegion key={region} data={r.benefits} />
 
               case 'socialProof':
                 if (!r?.socialProof) return null
