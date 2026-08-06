@@ -7,7 +7,8 @@ export async function embeddedRoutes(fastify: FastifyInstance) {
   if (!shop) return reply.status(400).send('Missing shop parameter')
 
   // Check if merchant exists with a valid token — if not, trigger OAuth
-  const { data: merchant } = await fastify.db
+  const { db } = await import('../db.js')
+  const { data: merchant } = await db
     .from('merchants')
     .select('id, shopify_access_token')
     .eq('shopify_shop_domain', shop)
