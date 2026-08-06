@@ -145,7 +145,7 @@ geography: 'AE',
       })
 
   // Register orders/create webhook via REST API
-await fetch(
+const webhookRes = await fetch(
   `https://${shop}/admin/api/2026-07/webhooks.json`,
   {
     method: 'POST',
@@ -161,7 +161,9 @@ await fetch(
       }
     })
   }
-) 
+)
+const webhookData = await webhookRes.json() as any
+server.log.info({ shop, webhookStatus: webhookRes.status, webhookData: JSON.stringify(webhookData) }, 'Webhook registration result')
 
 server.log.info({ shop, merchantId: newMerchant.id }, 'New merchant created automatically')
     }
