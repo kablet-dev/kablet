@@ -49,6 +49,16 @@ server.get('/health', async () => {
     db: error ? 'error' : 'connected'
   }
 })
+server.get('/auth', async (request, reply) => {
+  const { shop } = request.query as { shop?: string }
+  if (!shop) return reply.status(400).send({ error: 'Missing shop' })
+  
+  const scopes = 'read_orders,write_orders,read_draft_orders,write_draft_orders,read_customers'
+  const redirectUri = `${process.env.RENDER_EXTERNAL_URL}/auth/callback`
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${process.env.SHOPIFY_CLIENT_ID}&scope=${scopes}&redirect_uri=${redirectUri}`
+  
+  return reply.redirect(installUrl)
+})
 
 server.get('/auth/callback', async (request, reply) => {
   const { code, shop, charge_id, plan_handle } = request.query as any

@@ -2,7 +2,7 @@
 
 client_id = "67a720f66e77c1e3f597ddef97dbde0e"
 name = "Kablet"
-application_url = "https://example.com"
+application_url = "https://kablet-backend.onrender.com/app"
 embedded = true
 
 [build]
@@ -23,7 +23,7 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ ]
+redirect_urls = [ "https://kablet-backend.onrender.com/auth/callback" ]
 
 [metaobjects.app.faq]
 name = "FAQ"
