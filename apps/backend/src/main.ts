@@ -49,6 +49,25 @@ server.get('/health', async () => {
     db: error ? 'error' : 'connected'
   }
 })
+
+server.get('/app', async (request, reply) => {
+  const { shop } = request.query as { shop?: string }
+  if (!shop) return reply.status(400).send({ error: 'Missing shop' })
+
+  const { data: merchant } = await db
+    .from('merchants')
+    .select('id, shopify_access_token')
+    .eq('shopify_shop_domain', shop)
+    .single()
+
+  if (!merchant || !merchant.shopify_access_token) {
+    return reply.redirect(`/auth?shop=${shop}`)
+  }
+
+  const frontendUrl = 'https://guileless-druid-0d228c.netlify.app'
+  return reply.redirect(`${frontendUrl}/dashboard?shop=${shop}`)
+})
+
 server.get('/auth', async (request, reply) => {
   const { shop } = request.query as { shop?: string }
   if (!shop) return reply.status(400).send({ error: 'Missing shop' })
