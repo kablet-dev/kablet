@@ -61,15 +61,21 @@ export interface OpportunityDefinition {
   base_priority: number
   required_geography: string
   min_transaction_value: number | null
+  required_transaction_type: string | null
+  requires_shipping_address: boolean
+  execution_method: string
+  shopify_product_variant_id: string
   shopify_product_price: number
   headline: string
   description: string
   value_proposition: string
   visual_asset_url: string
   cta_label: string
+  value_bullets: string[]
+  social_proof: string | null
+  trust_rating: number | null
   created_at: string
 }
-
 export const adminApi = {
   getSummary: () =>
     adminFetch<AdminSummary>('/admin/summary'),
