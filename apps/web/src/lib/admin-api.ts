@@ -83,6 +83,19 @@ export const adminApi = {
   getCatalog: () =>
     adminFetch<{ definitions: OpportunityDefinition[] }>('/admin/catalog'),
 
+  getOpportunity: (id: string) =>
+    adminFetch<OpportunityDefinition>(`/admin/catalog/${id}`),
+
+  updateOpportunity: (id: string, body: Partial<OpportunityDefinition>) =>
+    fetch(`${API_URL}/admin/catalog/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ADMIN_SECRET}`,
+      },
+      body: JSON.stringify(body),
+    }),
+
   getAllPayouts: () =>
     adminFetch<{ payouts: any[] }>('/admin/payouts'),
 

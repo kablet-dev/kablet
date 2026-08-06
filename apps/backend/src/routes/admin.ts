@@ -226,6 +226,41 @@ fastify.patch('/admin/merchants/:id/config', async (request, reply) => {
     return reply.send(data)
   })
 
+  // ── GET /admin/catalog/:id ──────────────────────────────────────────
+  fastify.get('/admin/catalog/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const { data, error } = await db
+      .from('opportunity_definitions')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !data) return reply.status(404).send({ error: 'Not found' })
+    return reply.send(data)
+  })
+
+  // ── PATCH /admin/catalog/:id ─────────────────────────────────────────
+  fastify.patch('/admin/catalog/:id', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as any
+
+    // Prevent direct lifecycle_state changes through this route
+    delete body.lifecycle_state
+    delete body.id
+    delete body.created_at
+
+    const { data, error } = await db
+      .from('opportunity_definitions')
+      .update(body)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return reply.status(500).send({ error: error.message })
+    return reply.send(data)
+  })
+
   // ── GET /admin/transactions ──────────────────────────────────────────
   fastify.get('/admin/transactions', async (request, reply) => {
     const { page = '1' } = request.query as { page?: string }

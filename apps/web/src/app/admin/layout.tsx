@@ -22,8 +22,8 @@ export default function AdminLayout({
 <Link href="/admin/merchants" className="text-sm text-gray-400 hover:text-white">
   Merchants
 </Link>
-<Link href="/admin/catalog" className="text-sm text-gray-400 hover:text-white">
-  Catalog
+<Link href="/admin/opportunities" className="text-sm text-gray-400 hover:text-white">
+  Opportunities
 </Link>
 <Link href="/admin/payouts" className="text-sm text-gray-400 hover:text-white">
   Payouts
