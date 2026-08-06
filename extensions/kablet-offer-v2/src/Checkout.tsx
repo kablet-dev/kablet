@@ -49,7 +49,6 @@ function HeaderRegion({ data }: { data: any }) {
 }
 
 function MediaContentRegion({ media, content, value, benefits }: { media: any; content: any; value: any; benefits: any }) {
-  console.log('MEDIA_REGION value:', JSON.stringify(value), 'benefits:', JSON.stringify(benefits))
   return (
     <s-grid gridTemplateColumns="35% 1fr" gap="base" alignItems="start">
       {media && (
@@ -71,7 +70,7 @@ function MediaContentRegion({ media, content, value, benefits }: { media: any; c
         )}
         {value && value.amount && (
           <s-stack direction="block" gap="none">
-            <s-text emphasis="bold" size="large">{value.currency} {formatPrice(value.amount)}</s-text>
+            <s-heading level="1">{value.currency} {formatPrice(value.amount)}</s-heading>
             {value.label && <s-text color="subdued" type="small">{value.label}</s-text>}
           </s-stack>
         )}

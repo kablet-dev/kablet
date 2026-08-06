@@ -72,17 +72,13 @@ if (!code || !shop) {
     client_id: process.env.SHOPIFY_CLIENT_ID,
     client_secret: process.env.SHOPIFY_CLIENT_SECRET,
     code,
-    expiring: 1,
   }),
 })
 
   const data = await response.json() as any
 const accessToken = data.access_token
-const refreshToken = data.refresh_token ?? null
-const expiresIn = data.expires_in ?? null
-const expiresAt = expiresIn
-  ? new Date(Date.now() + (expiresIn - 300) * 1000).toISOString()
-  : null
+const refreshToken = null
+const expiresAt = null
 
   if (!accessToken) {
     return reply.status(400).send({ error: 'Failed to get access token' })
