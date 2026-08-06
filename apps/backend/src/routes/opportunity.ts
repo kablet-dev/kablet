@@ -147,7 +147,7 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       .eq('merchant_id', merchant.id)
       .single()
 
-    if (!config?.offers_enabled) return reply.send({ opportunity: null })
+    if (config && !config.offers_enabled) return reply.send({ opportunity: null })
 
     // Look up transaction event
     const { data: event } = await db
