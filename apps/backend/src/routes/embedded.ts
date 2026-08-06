@@ -3,10 +3,21 @@ import type { FastifyInstance } from 'fastify'
 export async function embeddedRoutes(fastify: FastifyInstance) {
 
   fastify.get('/app', async (request, reply) => {
-    const { shop } = request.query as { shop?: string }
-    if (!shop) return reply.status(400).send('Missing shop parameter')
+  const { shop } = request.query as { shop?: string }
+  if (!shop) return reply.status(400).send('Missing shop parameter')
 
-    const html = `<!DOCTYPE html>
+  // Check if merchant exists with a valid token — if not, trigger OAuth
+  const { data: merchant } = await fastify.db
+    .from('merchants')
+    .select('id, shopify_access_token')
+    .eq('shopify_shop_domain', shop)
+    .single()
+
+  if (!merchant || !merchant.shopify_access_token) {
+    return reply.redirect(`/auth?shop=${shop}`)
+  }
+
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
