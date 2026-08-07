@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { db } from '../db.js'
-import { fetchShopifyOrder } from '../shopify.js'
+import { fetchShopifyOrder, refreshShopifyToken } from '../shopify.js'
 
 // ── Template header config (icon/label/subtitle per business type) ─
 const HEADER_CONFIG: Record<string, { icon: string; subtitle: string; label: string }> = {
@@ -147,7 +147,7 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
       .eq('merchant_id', merchant.id)
       .single()
 
-    if (config && !config.offers_enabled) return reply.send({ opportunity: null })
+    if (!config?.offers_enabled) return reply.send({ opportunity: null })
 
     // Look up transaction event
     const { data: event } = await db
@@ -248,7 +248,7 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
 
     const { data: merchant } = await db
       .from('merchants')
-      .select('id, shopify_shop_domain, shopify_access_token')
+      .select('id, shopify_shop_domain, shopify_access_token, shopify_refresh_token, shopify_token_expires_at')
       .eq('shopify_shop_domain', shopDomain)
       .single()
 
@@ -304,9 +304,33 @@ export async function opportunityRoutes(fastify: FastifyInstance) {
 
     if (event?.shopify_order_id) {
       try {
+        // Refresh token if expired or expiring within 5 minutes
+        let accessToken = merchant.shopify_access_token
+        if (merchant.shopify_token_expires_at) {
+          const expiresAt = new Date(merchant.shopify_token_expires_at).getTime()
+          const now = Date.now()
+          if (expiresAt - now < 5 * 60 * 1000 && merchant.shopify_refresh_token) {
+            try {
+              const refreshed = await refreshShopifyToken(
+                merchant.shopify_shop_domain,
+                merchant.shopify_refresh_token
+              )
+              accessToken = refreshed.accessToken
+              await db.from('merchants').update({
+                shopify_access_token: refreshed.accessToken,
+                shopify_refresh_token: refreshed.refreshToken,
+                shopify_token_expires_at: refreshed.expiresAt,
+              }).eq('id', merchant.id)
+              fastify.log.info({ shop: merchant.shopify_shop_domain }, 'Token refreshed successfully')
+            } catch (refreshErr) {
+              fastify.log.error({ refreshErr, shop: merchant.shopify_shop_domain }, 'Token refresh failed')
+            }
+          }
+        }
+
         const originalOrder = await fetchShopifyOrder(
           merchant.shopify_shop_domain,
-          merchant.shopify_access_token,
+          accessToken,
           event.shopify_order_id
         )
         const firstName = originalOrder.shipping_address?.first_name ?? ''

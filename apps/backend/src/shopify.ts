@@ -56,6 +56,36 @@ export function translateShopifyOrder(
   }
 }
 
+export async function refreshShopifyToken(
+  shopDomain: string,
+  refreshToken: string
+): Promise<{ accessToken: string; refreshToken: string; expiresAt: string }> {
+  const response = await fetch(`https://${shopDomain}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.SHOPIFY_CLIENT_ID,
+      client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Token refresh failed: ${response.status}`)
+  }
+
+  const data = await response.json() as any
+  const expiresIn = data.expires_in ?? 86400
+  const expiresAt = new Date(Date.now() + (expiresIn - 300) * 1000).toISOString()
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? refreshToken,
+    expiresAt,
+  }
+}
+
 export async function fetchShopifyOrder(
   shopDomain: string,
   accessToken: string,
