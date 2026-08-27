@@ -1,10 +1,10 @@
 (function () {
   const config = window.KabletConfig || {}
 
-  if (!config.siteKey) {
-    console.warn('Kablet: siteKey is missing')
-    return
-  }
+  if (!config.siteId && !config.siteKey) {
+  console.warn('Kablet: siteId is missing')
+  return
+}
 
   const API_URL =
     config.apiUrl || 'http://localhost:3001'
@@ -136,7 +136,7 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-kablet-site-key': config.siteKey,
+              'x-kablet-site-id': config.siteId,
             },
             body: JSON.stringify({
               intentEventId: opportunity.intentEventId,
@@ -179,7 +179,7 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-kablet-site-key': config.siteKey,
+        'x-kablet-site-id': config.siteId,
       },
       body: JSON.stringify({
         eventType: 'FORM_SUBMISSION',
