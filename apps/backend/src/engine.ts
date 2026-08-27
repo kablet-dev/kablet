@@ -68,7 +68,7 @@ export interface DecisionTrace {
 // Fetches all active opportunity definitions.
 // Future: filter by campaign budgets, schedules, merchant targeting.
 
-async function fetchCandidates(): Promise<OpportunityDefinition[]> {
+export async function fetchCandidates(): Promise<OpportunityDefinition[]> {
   const { data, error } = await db
     .from('opportunity_definitions')
     .select('*')
@@ -128,7 +128,7 @@ function evaluateEligibility(
   return { definitionId: def.id, passed: true }
 }
 
-function runEligibility(
+export function runEligibility(
   candidates: OpportunityDefinition[],
   event: TransactionEvent
 ): EligibilityStageResult {
@@ -153,7 +153,7 @@ function computeBaseScore(def: OpportunityDefinition): number {
 //   score(event: TransactionEvent, def: OpportunityDefinition): Promise<number>
 // }
 
-function runScoring(
+export function runScoring(
   eligible: OpportunityDefinition[],
   config: EngineSettings
 ): ScoringResult[] {
@@ -171,7 +171,7 @@ function runScoring(
 // Sorts scored candidates and returns the winner.
 // Future: experiment engine selects variant here instead of top score.
 
-function runRanking(scored: ScoringResult[]): RankingResult {
+export function runRanking(scored: ScoringResult[]): RankingResult {
   const ranked = [...scored].sort((a, b) => {
     if (b.finalScore !== a.finalScore) return b.finalScore - a.finalScore
     return a.definition.id.localeCompare(b.definition.id) // deterministic tiebreak

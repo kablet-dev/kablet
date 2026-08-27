@@ -66,28 +66,37 @@ export interface OpportunityDefinition {
   value_bullets: string[]
   social_proof: string | null
   trust_rating: number | null
+  advertiser_id: string | null
+  host_category: string | null
+  eligible_event_types: string[]
+  provider_pool_id: string | null
+  minimum_confidence: number
+  display_mode: 'INLINE' | 'MODAL' | 'SLIDE_IN'
+  max_daily_presentations: number | null
   created_at: string
 }
 
 export interface DecisionRecord {
   id: string
-  transaction_event_id: string
-  merchant_id: string
+  transaction_event_id: string | null
+  merchant_id: string | null
   outcome_type: 'OPPORTUNITY_IDENTIFIED' | 'NO_ELIGIBLE_OPPORTUNITIES' | 'CATALOG_EMPTY'
   selected_definition_id: string | null
   candidates_evaluated: number
   eligibility_trace: EligibilityResult[]
   selected_score: number | null
   decided_at: string
+  intent_event_id: string | null
+  host_site_id: string | null
 }
 
 export interface OpportunityInstance {
   id: string
   decision_record_id: string
   definition_id: string
-  transaction_event_id: string
-  merchant_id: string
-  customer_reference: string
+  transaction_event_id: string | null
+  merchant_id: string | null
+  customer_reference: string | null
   current_state: InstanceState
   customer_response: 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | null
   response_at: string | null
@@ -100,6 +109,8 @@ export interface OpportunityInstance {
   customer_phone: string | null
   shipping_address: object | null
   created_at: string
+  intent_event_id: string | null
+  host_site_id: string | null
 }
 
 export type InstanceState =
