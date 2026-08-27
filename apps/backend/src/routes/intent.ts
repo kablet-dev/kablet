@@ -8,13 +8,7 @@ function hashApiKey(apiKey: string): string {
 }
 
 interface IntentRequest {
-  eventType:
-    | 'FORM_SUBMISSION'
-    | 'RFQ_SUBMITTED'
-    | 'QUOTE_REQUESTED'
-    | 'DEMO_BOOKED'
-    | 'CONSULTATION_REQUESTED'
-    | 'PURCHASE_COMPLETED'
+  eventType: string
   sourcePlatform: string
   externalEventId?: string
   formId?: string
@@ -46,34 +40,53 @@ interface IntentRequest {
   structuredContext?: Record<string, unknown>
 }
 
-export async function intentRoutes(fastify: FastifyInstance) {
-  fastify.post('/intent/events', async (request, reply) => {
-    const apiKey = request.headers['x-kablet-site-key'] as string | undefined
+async function resolveHostSite(request: any) {
+  const publicSiteId = request.headers['x-kablet-site-id'] as string | undefined
+  const apiKey = request.headers['x-kablet-site-key'] as string | undefined
 
-    if (!apiKey) {
-      return reply.status(401).send({ error: 'Missing site key' })
-    }
+  if (publicSiteId) {
+    const { data: site } = await db
+      .from('host_sites')
+      .select('id, status, default_geography')
+      .eq('public_id', publicSiteId)
+      .single()
 
+    return site
+  }
+
+  if (apiKey) {
     const keyHash = hashApiKey(apiKey)
 
-    const { data: keyRecord } = await db
+    const { data: key } = await db
       .from('host_api_keys')
       .select('id, host_site_id')
       .eq('key_hash', keyHash)
       .eq('status', 'ACTIVE')
       .single()
 
-    if (!keyRecord) {
-      return reply.status(401).send({ error: 'Invalid site key' })
-    }
+    if (!key) return null
 
     const { data: site } = await db
       .from('host_sites')
       .select('id, status, default_geography')
-      .eq('id', keyRecord.host_site_id)
+      .eq('id', key.host_site_id)
       .single()
 
-    if (!site || site.status !== 'ACTIVE') {
+    return site
+  }
+
+  return null
+}
+
+export async function intentRoutes(fastify: FastifyInstance) {
+  fastify.post('/intent/events', async (request, reply) => {
+    const site = await resolveHostSite(request)
+
+    if (!site) {
+      return reply.status(401).send({ error: 'Invalid or missing site identity' })
+    }
+
+    if (site.status !== 'ACTIVE') {
       return reply.status(403).send({ error: 'Host site is not active' })
     }
 
@@ -84,12 +97,6 @@ export async function intentRoutes(fastify: FastifyInstance) {
         error: 'eventType and sourcePlatform are required',
       })
     }
-
-    // Update API key usage timestamp.
-    await db
-      .from('host_api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', keyRecord.id)
 
     let companyId: string | null = null
 
@@ -102,13 +109,15 @@ export async function intentRoutes(fastify: FastifyInstance) {
           website: body.company.website ?? null,
           industry: body.company.industry ?? null,
           company_size: body.company.companySize ?? null,
-          geography: body.company.geography ?? body.geography ?? site.default_geography,
+          geography:
+            body.company.geography ??
+            body.geography ??
+            site.default_geography,
         })
         .select('id')
         .single()
 
-      if (error) {
-        fastify.log.error({ error }, 'Failed to create company')
+      if (error || !company) {
         return reply.status(500).send({ error: 'Failed to create company' })
       }
 
@@ -137,8 +146,7 @@ export async function intentRoutes(fastify: FastifyInstance) {
         .select('id')
         .single()
 
-      if (error) {
-        fastify.log.error({ error }, 'Failed to create customer')
+      if (error || !customer) {
         return reply.status(500).send({ error: 'Failed to create customer' })
       }
 
@@ -171,50 +179,48 @@ export async function intentRoutes(fastify: FastifyInstance) {
       .select('id')
       .single()
 
-    if (eventError) {
-      fastify.log.error({ eventError }, 'Failed to create intent event')
-      return reply.status(500).send({ error: 'Failed to create intent event' })
+    if (eventError || !intentEvent) {
+      return reply.status(500).send({
+        error: 'Failed to create intent event',
+      })
     }
 
     let engineResult
 
-try {
-  engineResult = await processIntentEvent({
-    id: intentEvent.id,
-    host_site_id: site.id,
-    customer_id: customerId,
-    company_id: companyId,
-    category: body.category,
-    geography: body.geography ?? site.default_geography,
-    budget: body.budget,
-    intent_text: body.intentText,
-  })
-} catch (error) {
-  fastify.log.error({ error }, 'Intent engine failed')
+    try {
+      engineResult = await processIntentEvent({
+        id: intentEvent.id,
+        host_site_id: site.id,
+        customer_id: customerId,
+        company_id: companyId,
+        category: body.category,
+        geography: body.geography ?? site.default_geography,
+        budget: body.budget,
+        intent_text: body.intentText,
+      })
+    } catch (error) {
+      fastify.log.error({ error }, 'Intent engine failed')
 
-  return reply.status(500).send({
-    error: 'Intent was saved, but offer selection failed',
-    intentEventId: intentEvent.id,
-    })
-
-  fastify.post('/intent/consent', async (request, reply) => {
-    const apiKey = request.headers['x-kablet-site-key'] as string | undefined
-
-    if (!apiKey) {
-      return reply.status(401).send({ error: 'Missing site key' })
+      return reply.status(500).send({
+        error: 'Intent was saved, but offer selection failed',
+        intentEventId: intentEvent.id,
+      })
     }
 
-    const keyHash = hashApiKey(apiKey)
+    return reply.status(201).send({
+      ok: true,
+      intentEventId: intentEvent.id,
+      status: 'PROCESSED',
+      outcome: engineResult.outcome,
+      opportunity: engineResult.opportunity,
+    })
+  })
 
-    const { data: keyRecord } = await db
-      .from('host_api_keys')
-      .select('id, host_site_id')
-      .eq('key_hash', keyHash)
-      .eq('status', 'ACTIVE')
-      .single()
+  fastify.post('/intent/consent', async (request, reply) => {
+    const site = await resolveHostSite(request)
 
-    if (!keyRecord) {
-      return reply.status(401).send({ error: 'Invalid site key' })
+    if (!site) {
+      return reply.status(401).send({ error: 'Invalid or missing site identity' })
     }
 
     const body = request.body as {
@@ -235,7 +241,7 @@ try {
       .from('intent_events')
       .select('id, customer_id')
       .eq('id', body.intentEventId)
-      .eq('host_site_id', keyRecord.host_site_id)
+      .eq('host_site_id', site.id)
       .single()
 
     if (!event) {
@@ -247,7 +253,7 @@ try {
       .select('id, current_state')
       .eq('id', body.instanceId)
       .eq('intent_event_id', body.intentEventId)
-      .eq('host_site_id', keyRecord.host_site_id)
+      .eq('host_site_id', site.id)
       .single()
 
     if (!instance) {
@@ -270,7 +276,9 @@ try {
       .single()
 
     if (consentError || !consent) {
-      return reply.status(500).send({ error: 'Could not save consent' })
+      return reply.status(500).send({
+        error: 'Could not save consent',
+      })
     }
 
     await db
@@ -283,7 +291,7 @@ try {
       .eq('id', instance.id)
 
     await db.from('widget_events').insert({
-      host_site_id: keyRecord.host_site_id,
+      host_site_id: site.id,
       intent_event_id: event.id,
       opportunity_instance_id: instance.id,
       event_type: 'ACCEPTED',
@@ -294,15 +302,5 @@ try {
       status: 'ACCEPTED',
       consentId: consent.id,
     })
-  })
-}
-
-return reply.status(201).send({
-  ok: true,
-  intentEventId: intentEvent.id,
-  status: 'PROCESSED',
-  outcome: engineResult.outcome,
-  opportunity: engineResult.opportunity,
-})
   })
 }
