@@ -11,21 +11,25 @@ import { payoutRoutes } from './routes/payouts.js'
 import { complianceRoutes } from './routes/compliance.js'
 import { wooCommerceRoutes } from './routes/woocommerce.js'
 import { wooDashboardRoutes } from './routes/woo-dashboard.js'
+import { intentRoutes } from './routes/intent.js'
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10)
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
+
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  ALLOWED_ORIGIN,
+  /\.myshopify\.com$/,
+  /\.shopify\.com$/,
+  /\.shopifycdn\.com$/,
+  /\.netlify\.app$/,
+]
 
 const server = Fastify({
   logger: true
 })
 await server.register(cors, {
-  origin: [
-    ALLOWED_ORIGIN,
-    /\.myshopify\.com$/,
-    /\.shopify\.com$/,
-    /\.shopifycdn\.com$/,
-    /\.netlify\.app$/,
-  ],
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 })
 
@@ -221,6 +225,7 @@ await server.register(payoutRoutes)
 await server.register(complianceRoutes)
 await server.register(wooCommerceRoutes)
 await server.register(wooDashboardRoutes)
+await server.register(intentRoutes)
 
 const start = async () => {
   try {
