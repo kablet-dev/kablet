@@ -1,4 +1,5 @@
 (function () {
+console.log('Kablet widget loaded')
   const config = window.KabletConfig || {}
 
   if (!config.siteId && !config.siteKey) {
