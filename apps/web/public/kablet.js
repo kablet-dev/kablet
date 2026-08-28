@@ -260,4 +260,15 @@
       })
     }, 300)
   })
+    document.addEventListener('wpcf7mailsent', function (event) {
+    const form = event.target
+
+    if (!form || !form.querySelector) {
+      return
+    }
+
+    sendIntent(form).catch(function (error) {
+      console.warn('Kablet: Contact Form 7 event failed', error)
+    })
+  })
 })()
