@@ -59,21 +59,21 @@
         hostUrl: window.location.origin,
         category: null,
         intentText:
-          fields.requirement ||
-          fields.message ||
-          fields.your-message ||
-          null,
-        geography: null,
-        customer: {
-          firstName:
-            fields.firstName ||
-            fields.first_name ||
-            fields['your-name'] ||
-            null,
-          lastName: fields.lastName || fields.last_name || null,
-          email: fields.email || fields['your-email'] || null,
-          phone: fields.phone || fields.tel || null,
-        },
+  fields.requirement ||
+  fields.message ||
+  fields['your-message'] ||
+  null,
+
+customer: {
+  firstName:
+    fields.firstName ||
+    fields.first_name ||
+    fields['your-name'] ||
+    null,
+  lastName: fields.lastName || fields.last_name || null,
+  email: fields.email || fields['your-email'] || null,
+  phone: fields.phone || fields.tel || null,
+},
         company: {
           name: fields.company || fields.companyName || null,
           industry: fields.industry || null,
