@@ -9,6 +9,32 @@
   const API_URL =
     config.apiUrl || 'http://localhost:3001'
 
+  (function () {
+  const config = window.KabletConfig || {}
+
+  const currentScript =
+    document.currentScript ||
+    Array.from(document.scripts).find(function (script) {
+      return script.src.includes('kablet.js')
+    })
+
+  let siteId = config.siteId || ''
+
+  if (currentScript && currentScript.src) {
+    const scriptUrl = new URL(currentScript.src, window.location.href)
+    siteId = scriptUrl.searchParams.get('site') || siteId
+  }
+
+  if (!siteId) {
+    console.warn('Kablet: site ID is missing')
+    return
+  }
+
+  config.siteId = siteId
+
+  const API_URL =
+    config.apiUrl || 'https://kablet-backend.onrender.com'
+
   const formSelector =
     config.formSelector || 'form'
 
