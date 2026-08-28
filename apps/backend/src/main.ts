@@ -18,6 +18,8 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000'
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
+  'https://braklet.com',
+  'https://www.braklet.com',
   ALLOWED_ORIGIN,
   /\.myshopify\.com$/,
   /\.shopify\.com$/,
