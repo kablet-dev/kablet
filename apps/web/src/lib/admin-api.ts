@@ -116,4 +116,20 @@ export const adminApi = {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
     }),
+      siteCheck: (url: string) =>
+    fetch(`${API_URL}/admin/site-check`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ADMIN_SECRET}`,
+      },
+      body: JSON.stringify({ url }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        const error = await response.json().catch(() => null)
+        throw new Error(error?.error ?? `Site check failed: ${response.status}`)
+      }
+
+      return response.json()
+    }),
 }

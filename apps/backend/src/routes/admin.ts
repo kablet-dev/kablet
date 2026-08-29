@@ -345,4 +345,140 @@ fastify.patch('/admin/payouts/:id/mark-paid', async (request, reply) => {
 
     return reply.send(data)
   })
+    // ── POST /admin/site-check ────────────────────────────────────────────
+  fastify.post('/admin/site-check', async (request, reply) => {
+    const body = request.body as { url?: string }
+
+    if (!body.url) {
+      return reply.status(400).send({ error: 'Website URL is required' })
+    }
+
+    let targetUrl: URL
+
+    try {
+      targetUrl = new URL(body.url)
+
+      if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+        throw new Error('Only HTTP and HTTPS URLs are supported')
+      }
+    } catch {
+      return reply.status(400).send({ error: 'Enter a valid website URL' })
+    }
+
+    try {
+      const response = await fetch(targetUrl.toString(), {
+        headers: {
+          'User-Agent': 'Kablet Site Checker/1.0',
+        },
+        signal: AbortSignal.timeout(15000),
+      })
+
+      const html = await response.text()
+      const lowerHtml = html.toLowerCase()
+
+      const forms = (html.match(/<form\b/gi) || []).length
+
+      const detectedPlatforms: string[] = []
+      const detectedForms: string[] = []
+
+      if (
+        lowerHtml.includes('wp-content') ||
+        lowerHtml.includes('wordpress')
+      ) {
+        detectedPlatforms.push('WordPress')
+      }
+
+      if (
+        lowerHtml.includes('wpcf7') ||
+        lowerHtml.includes('contact-form-7')
+      ) {
+        detectedForms.push('Contact Form 7')
+      }
+
+      if (
+        lowerHtml.includes('wpforms') ||
+        lowerHtml.includes('wpforms-form')
+      ) {
+        detectedForms.push('WPForms')
+      }
+
+      if (
+        lowerHtml.includes('gform_wrapper') ||
+        lowerHtml.includes('gravityforms')
+      ) {
+        detectedForms.push('Gravity Forms')
+      }
+
+      if (
+        lowerHtml.includes('elementor-form') ||
+        lowerHtml.includes('elementor-pro')
+      ) {
+        detectedForms.push('Elementor Forms')
+      }
+
+      if (lowerHtml.includes('w-form')) {
+        detectedPlatforms.push('Webflow')
+      }
+
+      if (lowerHtml.includes('shopify')) {
+        detectedPlatforms.push('Shopify')
+      }
+
+      const ajaxIndicators = [
+        'xmlhttprequest',
+        'fetch(',
+        'admin-ajax.php',
+        'wpforms-ajax',
+        'elementor-pro',
+        'gravityforms',
+      ]
+
+      const ajaxDetected = ajaxIndicators.some((indicator) =>
+        lowerHtml.includes(indicator)
+      )
+
+      const https = targetUrl.protocol === 'https:'
+      const compatible =
+        forms > 0 &&
+        (detectedForms.includes('Contact Form 7') ||
+          detectedForms.includes('WPForms') ||
+          detectedForms.includes('Gravity Forms') ||
+          detectedForms.includes('Elementor Forms') ||
+          ajaxDetected)
+
+      let fitResult = 'REVIEW NEEDED'
+      let recommendation = 'Submit a test form manually before pitching.'
+
+      if (compatible && https) {
+        fitResult = 'GOOD FIT'
+        recommendation =
+          'One-script widget should be suitable. Perform one test submission.'
+      } else if (!https) {
+        fitResult = 'REVIEW NEEDED'
+        recommendation = 'Website is not using HTTPS.'
+      } else if (forms === 0) {
+        fitResult = 'NOT READY'
+        recommendation = 'No forms were detected on this page.'
+      }
+
+      return reply.send({
+        url: targetUrl.toString(),
+        reachable: response.ok,
+        statusCode: response.status,
+        https,
+        forms,
+        platforms: detectedPlatforms,
+        formTypes: detectedForms,
+        ajaxDetected,
+        fitResult,
+        recommendation,
+      })
+    } catch (error) {
+      request.log.error({ error }, 'Site check failed')
+
+      return reply.status(502).send({
+        error: 'Could not access this website',
+      })
+    }
+  })
 }

@@ -25,6 +25,9 @@ export default function AdminLayout({
 <Link href="/admin/opportunities" className="text-sm text-gray-400 hover:text-white">
   Opportunities
 </Link>
+<Link href="/admin/site-check" className="text-sm text-gray-400 hover:text-white">
+  Site Checker
+</Link>
 <Link href="/admin/payouts" className="text-sm text-gray-400 hover:text-white">
   Payouts
 </Link>
