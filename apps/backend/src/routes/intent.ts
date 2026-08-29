@@ -192,12 +192,13 @@ export async function intentRoutes(fastify: FastifyInstance) {
     let engineResult
 
     try {
-      engineResult = await processIntentEvent({
+            engineResult = await processIntentEvent({
         id: intentEvent.id,
         host_site_id: site.id,
         customer_id: customerId,
         company_id: companyId,
         category: body.category ?? site.manual_category ?? null,
+        manual_offer_id: site.manual_offer_id ?? null,
         geography: body.geography ?? site.default_geography,
         budget: body.budget,
         intent_text: body.intentText,

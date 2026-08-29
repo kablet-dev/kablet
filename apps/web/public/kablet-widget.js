@@ -57,7 +57,7 @@
         formId: form.id || null,
         pageUrl: window.location.href,
         hostUrl: window.location.origin,
-        category: null,
+        category: document.body.dataset.kabletCategory || null,
         intentText:
   fields.requirement ||
   fields.message ||
@@ -275,4 +275,78 @@ customer: {
       sendIntent(form)
     }
   })
+
+  // Generic AJAX form detection.
+  // Watches for forms and success messages injected into the page
+  // by JavaScript-based form plugins.
+  if (window.MutationObserver) {
+    const ajaxObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        mutation.addedNodes.forEach(function (node) {
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return
+          }
+
+          const elements = []
+
+          if (node.matches && node.matches('form')) {
+            elements.push(node)
+          }
+
+          if (node.querySelectorAll) {
+            node.querySelectorAll('form').forEach(function (form) {
+              elements.push(form)
+            })
+          }
+
+          const successSelectors = [
+            '.success',
+            '.form-success',
+            '.form-success-message',
+            '.success-message',
+            '[role="alert"]',
+            '.w-form-done',
+            '.wpforms-confirmation-container',
+            '.gform_confirmation_message',
+            '.elementor-message-success',
+            '.formidable_message',
+            '.ff-message-success'
+          ]
+
+          let successDetected = false
+
+          successSelectors.forEach(function (selector) {
+            if (
+              (node.matches && node.matches(selector)) ||
+              (node.querySelector && node.querySelector(selector))
+            ) {
+              successDetected = true
+            }
+          })
+
+          if (successDetected) {
+            const possibleForm =
+              node.closest && node.closest('form')
+                ? node.closest('form')
+                : document.querySelector('form')
+
+            if (possibleForm) {
+              elements.push(possibleForm)
+            }
+          }
+
+          elements.forEach(function (form) {
+            setTimeout(function () {
+              sendIntent(form)
+            }, 300)
+          })
+        })
+      })
+    })
+
+    ajaxObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    })
+  }
 })()

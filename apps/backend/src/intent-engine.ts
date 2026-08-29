@@ -13,17 +13,24 @@ export interface IntentInput {
   customer_id?: string | null
   company_id?: string | null
   category?: string | null
+  manual_offer_id?: string | null
   geography?: string | null
   budget?: number | null
   intent_text?: string | null
 }
 
 export async function processIntentEvent(event: IntentInput) {
-  const { data: candidates, error: candidateError } = await db
+    let candidateQuery = db
     .from('opportunity_definitions')
     .select('*')
     .eq('lifecycle_state', 'ACTIVE')
     .order('base_priority', { ascending: true })
+
+  if (event.manual_offer_id) {
+    candidateQuery = candidateQuery.eq('id', event.manual_offer_id)
+  }
+
+  const { data: candidates, error: candidateError } = await candidateQuery
 
   if (candidateError) {
     throw new Error(candidateError.message)
