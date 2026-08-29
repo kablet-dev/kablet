@@ -1,5 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? ''
+const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? ''
 
 async function adminFetch<T>(path: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
