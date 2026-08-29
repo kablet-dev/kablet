@@ -8,6 +8,12 @@ declare module 'fastify' {
 }
 
 async function adminAuthMiddleware(request: FastifyRequest, reply: any) {
+  // Allow browser CORS preflight requests through.
+  // The actual GET/POST/PATCH request is still protected below.
+  if (request.method === 'OPTIONS') {
+    return
+  }
+
   const authHeader = request.headers.authorization
   const adminSecret = process.env.ADMIN_SECRET
 
