@@ -22,7 +22,7 @@ export default function SiteCheckPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
     setError('')
@@ -30,13 +30,7 @@ export default function SiteCheckPage() {
 
     try {
       const response = await adminApi.siteCheck(url)
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error ?? 'Site check failed')
-      }
-
-      setResult(await response.json())
+      setResult(response)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Site check failed')
     } finally {
