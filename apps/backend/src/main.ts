@@ -20,6 +20,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'https://braklet.com',
   'https://www.braklet.com',
+  'https://kablet-dashboard.onrender.com',
   ALLOWED_ORIGIN,
   /\.myshopify\.com$/,
   /\.shopify\.com$/,
@@ -31,7 +32,17 @@ const server = Fastify({
   logger: true
 })
 await server.register(cors, {
-  origin: ALLOWED_ORIGINS,
+  origin: function (origin, callback) {
+    server.log.info({ origin }, 'CORS request origin')
+
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true)
+      return
+    }
+
+    server.log.warn({ origin }, 'CORS origin rejected')
+    callback(new Error('Origin not allowed'), false)
+  },
   credentials: true,
 })
 
