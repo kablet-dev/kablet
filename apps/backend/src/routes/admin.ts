@@ -321,4 +321,28 @@ fastify.patch('/admin/payouts/:id/mark-paid', async (request, reply) => {
   if (error) return reply.status(500).send({ error: error.message })
   return reply.send(data)
 })
+  // ── PATCH /admin/host-sites/:publicId/config ─────────────────────────
+  fastify.patch('/admin/host-sites/:publicId/config', async (request, reply) => {
+    const { publicId } = request.params as { publicId: string }
+    const body = request.body as {
+      manual_category?: string | null
+      manual_offer_id?: string | null
+    }
+
+    const { data, error } = await db
+      .from('host_sites')
+      .update({
+        manual_category: body.manual_category || null,
+        manual_offer_id: body.manual_offer_id || null,
+      })
+      .eq('public_id', publicId)
+      .select('id, public_id, manual_category, manual_offer_id')
+      .single()
+
+    if (error) {
+      return reply.status(500).send({ error: error.message })
+    }
+
+    return reply.send(data)
+  })
 }

@@ -47,7 +47,9 @@ async function resolveHostSite(request: any) {
   if (publicSiteId) {
     const { data: site } = await db
       .from('host_sites')
-      .select('id, status, default_geography')
+      .select(
+  'id, status, default_geography, manual_category, manual_offer_id'
+)
       .eq('public_id', publicSiteId)
       .single()
 
@@ -68,7 +70,9 @@ async function resolveHostSite(request: any) {
 
     const { data: site } = await db
       .from('host_sites')
-      .select('id, status, default_geography')
+      .select(
+  'id, status, default_geography, manual_category, manual_offer_id'
+)
       .eq('id', key.host_site_id)
       .single()
 
@@ -165,7 +169,7 @@ export async function intentRoutes(fastify: FastifyInstance) {
         form_id: body.formId ?? null,
         page_url: body.pageUrl ?? null,
         host_url: body.hostUrl ?? null,
-        category: body.category ?? null,
+        category: body.category ?? site.manual_category ?? null,
         project_type: body.projectType ?? null,
         intent_text: body.intentText ?? null,
         geography: body.geography ?? site.default_geography,
@@ -193,7 +197,7 @@ export async function intentRoutes(fastify: FastifyInstance) {
         host_site_id: site.id,
         customer_id: customerId,
         company_id: companyId,
-        category: body.category,
+        category: body.category ?? site.manual_category ?? null,
         geography: body.geography ?? site.default_geography,
         budget: body.budget,
         intent_text: body.intentText,
