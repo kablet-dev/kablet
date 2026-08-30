@@ -130,9 +130,9 @@ customer: {
     modal.style.cssText = `
       position:relative;
       width:min(900px,100%);
-      height:auto;
-max-height:calc(100vh - 24px);
-overflow:visible;
+      height:560px;
+max-height:calc(100vh - 32px);
+overflow:hidden;
       background:#FBF8F5;
       border-radius:24px;
       color:#171414;
@@ -165,15 +165,15 @@ overflow:visible;
 
       <div style="
         display:grid;
-        grid-template-columns:1fr 1fr;
-        height:auto;
+grid-template-columns:1fr 1fr;
+height:100%;
 min-height:0;
       ">
         <div style="
           display:flex;
           flex-direction:column;
           justify-content:center;
-          padding:40px 40px 32px;
+          padding:40px 40px 88px;
         ">
           <div style="
             display:inline-flex;
@@ -283,9 +283,11 @@ min-height:0;
           align-items:center;
           justify-content:center;
           height:100%;
-min-height:320px;
+min-height:0;
+box-sizing:border-box;
 padding:24px;
 overflow:hidden;
+background:#F7F2EA;
           background:#F7F2EA;
         ">
           ${
@@ -314,13 +316,19 @@ overflow:hidden;
       </div>
 
       <div style="
-        display:flex;
-        justify-content:space-between;
-        gap:16px;
-        padding:16px 28px;
-        border-top:1px solid #E8DDD4;
-        color:#6F6260;
-        font-size:12px;
+        position:absolute;
+left:0;
+bottom:0;
+width:50%;
+box-sizing:border-box;
+display:flex;
+justify-content:space-between;
+gap:16px;
+padding:16px 28px;
+border-top:1px solid #E8DDD4;
+background:#FBF8F5;
+color:#6F6260;
+font-size:12px;
       ">
         <span>✓ Connecting you with relevant business solution providers.</span>
         <strong style="color:#560B14;">Powered by Kablet</strong>
@@ -446,10 +454,10 @@ overflow:hidden;
         }
 
         #kablet-offer-overlay > div {
-          width:100% !important;
-          height:auto !important;
-          max-height:calc(100vh - 24px) !important;
-          overflow:visible !important;
+  width:100% !important;
+  height:auto !important;
+  max-height:calc(100vh - 24px) !important;
+  overflow:hidden !important;
           border-radius:22px !important;
         }
 
@@ -494,6 +502,11 @@ overflow:hidden;
         #kablet-offer-overlay > div > div:last-of-type {
           padding:12px 18px !important;
         }
+
+        #kablet-offer-overlay > div > div:last-of-type {
+  position:static !important;
+  width:100% !important;
+}
       }
     `
 
