@@ -130,8 +130,9 @@ customer: {
     modal.style.cssText = `
       position:relative;
       width:min(900px,100%);
-      height:min(560px,calc(100vh - 32px));
-overflow:hidden;
+      height:auto;
+max-height:calc(100vh - 24px);
+overflow:visible;
       background:#FBF8F5;
       border-radius:24px;
       color:#171414;
@@ -165,7 +166,8 @@ overflow:hidden;
       <div style="
         display:grid;
         grid-template-columns:1fr 1fr;
-        height:420px;
+        height:auto;
+min-height:0;
       ">
         <div style="
           display:flex;
@@ -280,7 +282,8 @@ overflow:hidden;
           display:flex;
           align-items:center;
           justify-content:center;
-          height:320px;
+          height:100%;
+min-height:320px;
 padding:24px;
 overflow:hidden;
           background:#F7F2EA;
@@ -435,9 +438,10 @@ overflow:hidden;
     })
     
     const mobileStyle = document.createElement('style')
-            mobileStyle.textContent = `
+                mobileStyle.textContent = `
       @media (max-width: 767px) {
         #kablet-offer-overlay {
+          align-items:center !important;
           padding:12px !important;
         }
 
@@ -445,19 +449,20 @@ overflow:hidden;
           width:100% !important;
           height:auto !important;
           max-height:calc(100vh - 24px) !important;
-          overflow:hidden !important;
+          overflow:visible !important;
+          border-radius:22px !important;
         }
 
         #kablet-offer-overlay > div > div:first-of-type {
           display:flex !important;
           flex-direction:column !important;
-          min-height:0 !important;
           height:auto !important;
+          min-height:0 !important;
         }
 
         #kablet-offer-overlay > div > div:first-of-type > div:first-child {
           order:2 !important;
-          padding:24px 22px 20px !important;
+          padding:22px 20px 18px !important;
         }
 
         #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) {
@@ -465,18 +470,28 @@ overflow:hidden;
           width:100% !important;
           height:180px !important;
           min-height:180px !important;
-          padding:18px !important;
+          padding:16px !important;
           overflow:hidden !important;
         }
 
         #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) img {
           width:100% !important;
-          height:144px !important;
-          max-height:144px !important;
+          height:148px !important;
           object-fit:cover !important;
         }
 
-        #kablet-offer-overlay > div > div:last-child {
+        #kablet-offer-overlay h2 {
+          font-size:30px !important;
+          line-height:1.05 !important;
+          margin-bottom:14px !important;
+        }
+
+        #kablet-offer-overlay p {
+          font-size:15px !important;
+          line-height:1.4 !important;
+        }
+
+        #kablet-offer-overlay > div > div:last-of-type {
           padding:12px 18px !important;
         }
       }
