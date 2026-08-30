@@ -212,8 +212,8 @@
       #kablet-offer-modal {
         position:relative;
         width:min(900px,100%);
-        height:560px;
-        max-height:calc(100vh - 40px);
+        height:620px;
+max-height:calc(100vh - 32px);
         overflow:hidden;
         box-sizing:border-box;
         background:#FBF8F5;
@@ -255,7 +255,7 @@
         flex-direction:column;
         justify-content:center;
         min-width:0;
-        padding:42px 40px 76px;
+        padding:34px 40px 92px;
       }
 
       .kablet-badge {
@@ -281,14 +281,14 @@
         max-width:390px;
         margin:0 0 18px;
         color:#171414;
-        font-size:42px;
+        font-size:38px;
         line-height:1.05;
         letter-spacing:-1.5px;
       }
 
       .kablet-description {
         max-width:410px;
-        margin:0 0 24px;
+        margin:0 0 18px;
         color:#6F6260;
         font-size:17px;
         line-height:1.45;
@@ -299,8 +299,8 @@
         align-items:flex-start;
         gap:10px;
         max-width:410px;
-        margin-bottom:24px;
-        padding:15px 16px;
+        margin-bottom:18px;
+padding:13px 16px;
         border:1px solid #E8DDD4;
         border-radius:13px;
         background:#FBF8F5;
@@ -347,7 +347,7 @@
 
       .kablet-privacy {
         max-width:410px;
-        margin:20px 0 0;
+        margin:14px 0 0;
         color:#6F6260;
         font-size:11px;
         line-height:1.45;
