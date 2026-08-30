@@ -176,14 +176,12 @@
             No thanks, I'll do this later
           </button>
 
-          <p class="kablet-privacy">
-            Your details are only shared with relevant providers after you choose to continue.
-          </p>
+          
 
           <div class="kablet-footer">
-            <span>Powered by <strong>Kablet</strong></span>
-            <span class="kablet-footer-privacy">Privacy</span>
-          </div>
+  <span>🔒 Shared only after you choose to continue.</span>
+  <span>Powered by <strong>Kablet</strong></span>
+</div>
         </section>
 
         <section class="kablet-offer-visual">
@@ -360,7 +358,8 @@ padding:13px 16px;
         display:flex;
         justify-content:space-between;
         width:50%;
-        padding:15px 40px;
+        padding:15px 32px;
+align-items:center;
         border-top:1px solid #E8DDD4;
         color:#8A7D78;
         font-size:11px;
@@ -484,8 +483,9 @@ background:#F7F2EA;
           left:0;
           bottom:0;
           width:100%;
-          padding:12px 20px;
-          font-size:10px;
+          padding:11px 18px;
+font-size:9px;
+line-height:1.3;
         }
       }
     `
