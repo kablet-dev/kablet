@@ -435,36 +435,49 @@ overflow:hidden;
     })
     
     const mobileStyle = document.createElement('style')
-        mobileStyle.textContent = `
+            mobileStyle.textContent = `
       @media (max-width: 767px) {
         #kablet-offer-overlay {
           padding:12px !important;
         }
 
         #kablet-offer-overlay > div {
-          grid-template-columns:1fr !important;
+          width:100% !important;
           height:auto !important;
           max-height:calc(100vh - 24px) !important;
           overflow:hidden !important;
         }
 
-        #kablet-offer-overlay > div > div:first-child {
-          padding:28px 22px 20px !important;
+        #kablet-offer-overlay > div > div:first-of-type {
+          display:flex !important;
+          flex-direction:column !important;
+          min-height:0 !important;
+          height:auto !important;
         }
 
-        #kablet-offer-overlay > div > div:nth-child(2) {
-          order:-1;
+        #kablet-offer-overlay > div > div:first-of-type > div:first-child {
+          order:2 !important;
+          padding:24px 22px 20px !important;
+        }
+
+        #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) {
+          order:1 !important;
+          width:100% !important;
           height:180px !important;
           min-height:180px !important;
           padding:18px !important;
           overflow:hidden !important;
         }
 
-        #kablet-offer-overlay > div > div:nth-child(2) img {
+        #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) img {
           width:100% !important;
           height:144px !important;
           max-height:144px !important;
           object-fit:cover !important;
+        }
+
+        #kablet-offer-overlay > div > div:last-child {
+          padding:12px 18px !important;
         }
       }
     `
