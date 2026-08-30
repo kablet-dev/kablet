@@ -429,8 +429,10 @@ customer: {
   console.warn('Kablet widget: consent failed', error)
   button.disabled = false
   button.textContent = `${opportunity.ctaLabel || 'Get options'} →`
-  alert('Something went wrong. Please try again.')
+    alert('Something went wrong. Please try again.')
 })
+    })
+    
     const mobileStyle = document.createElement('style')
     mobileStyle.textContent = `
       @media (max-width: 767px) {
