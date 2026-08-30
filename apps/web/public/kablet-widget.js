@@ -7,10 +7,7 @@
       return item.src.includes('kablet-widget.js')
     })
 
-  if (!script) {
-    console.warn('Kablet widget: script not found')
-    return
-  }
+  if (!script) return
 
   const scriptUrl = new URL(script.src, window.location.href)
   const siteId = scriptUrl.searchParams.get('site')
@@ -23,32 +20,31 @@
   const API_URL = 'https://kablet-backend.onrender.com'
   const processedForms = new WeakSet()
 
-  console.log('Kablet widget loaded')
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;')
+  }
 
   function readForm(form) {
-    const formData = new FormData(form)
     const fields = {}
-
-    formData.forEach(function (value, key) {
+    new FormData(form).forEach(function (value, key) {
       fields[key] = String(value)
     })
-
     return fields
   }
 
-    function sendIntent(form) {
-    console.log('Kablet: sendIntent called', form)
-
-    if (!form || processedForms.has(form)) {
-      console.log('Kablet: form skipped', form)
-      return
-    }
+  function sendIntent(form) {
+    if (!form || processedForms.has(form)) return
 
     processedForms.add(form)
 
     const fields = readForm(form)
 
-    return fetch(`${API_URL}/intent/events`, {
+    fetch(`${API_URL}/intent/events`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,27 +58,26 @@
         hostUrl: window.location.origin,
         category: document.body.dataset.kabletCategory || null,
         intentText:
-  fields.requirement ||
-  fields.message ||
-  fields['your-message'] ||
-  null,
-
-customer: {
-  firstName:
-    fields.firstName ||
-    fields.first_name ||
-    fields['your-name'] ||
-    null,
-  lastName: fields.lastName || fields.last_name || null,
-  email: fields.email || fields['your-email'] || null,
-  phone: fields.phone || fields.tel || null,
-},
+          fields.requirement ||
+          fields.message ||
+          fields['your-message'] ||
+          null,
+        customer: {
+          firstName:
+            fields.firstName ||
+            fields.first_name ||
+            fields['your-name'] ||
+            null,
+          lastName: fields.lastName || fields.last_name || null,
+          email: fields.email || fields['your-email'] || null,
+          phone: fields.phone || fields.tel || null,
+        },
         company: {
           name: fields.company || fields.companyName || null,
           industry: fields.industry || null,
         },
         structuredContext: {
-          fields: fields,
+          fields,
         },
       }),
     })
@@ -104,250 +99,410 @@ customer: {
       })
   }
 
-    function showOffer(opportunity) {
-    if (document.getElementById('kablet-offer-overlay')) {
-      return
-    }
+  function showOffer(opportunity) {
+    if (document.getElementById('kablet-offer-overlay')) return
+
+    const imageUrl =
+      opportunity.imageUrl ||
+      opportunity.visualAssetUrl ||
+      opportunity.visual_asset_url ||
+      ''
+
+    const headline =
+      opportunity.headline ||
+      opportunity.name ||
+      'You may also need a relevant business solution'
+
+    const description =
+      opportunity.description ||
+      'Explore a relevant option for your business.'
+
+    const benefit =
+      opportunity.benefit ||
+      opportunity.valueProposition ||
+      'Get connected with relevant providers and compare your options.'
+
+    const ctaText = opportunity.ctaLabel || 'Get options'
 
     const overlay = document.createElement('div')
     overlay.id = 'kablet-offer-overlay'
 
-    overlay.style.cssText = `
-      position:fixed;
-      inset:0;
-      z-index:999999;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px;
-      background:rgba(23,20,20,.72);
-      backdrop-filter:blur(5px);
-      font-family:Arial,sans-serif;
-    `
-
     const modal = document.createElement('div')
+    modal.id = 'kablet-offer-modal'
 
-    modal.style.cssText = `
-      position:relative;
-      width:min(900px,100%);
-      height:560px;
-max-height:calc(100vh - 32px);
-overflow:hidden;
-      background:#FBF8F5;
-      border-radius:24px;
-      color:#171414;
-      box-shadow:0 30px 80px rgba(23,20,20,.25);
-    `
-
-    const image = opportunity.imageUrl || opportunity.visualAssetUrl || ''
-    const benefit =
-      opportunity.benefit ||
-      opportunity.valueProposition ||
-      'Get connected with relevant business solution providers and compare your options.'
+    const imageMarkup = imageUrl
+      ? `
+        <img
+          src="${escapeHtml(imageUrl)}"
+          alt=""
+          class="kablet-offer-image"
+        >
+      `
+      : `
+        <div class="kablet-image-placeholder">✦</div>
+      `
 
     modal.innerHTML = `
-      <button id="kablet-close" type="button" aria-label="Close"
-        style="
-          position:absolute;
-          top:14px;
-          right:14px;
-          z-index:2;
-          width:40px;
-          height:40px;
-          border:0;
-          border-radius:50%;
-          background:transparent;
-          color:#171414;
-          font-size:25px;
-          line-height:1;
-          cursor:pointer;
-        ">×</button>
+      <button
+        id="kablet-close"
+        class="kablet-close"
+        type="button"
+        aria-label="Close"
+      >×</button>
 
-      <div style="
-        display:grid;
-grid-template-columns:1fr 1fr;
-height:100%;
-min-height:0;
-      ">
-        <div style="
-          display:flex;
-          flex-direction:column;
-          justify-content:center;
-          padding:40px 40px 88px;
-        ">
-          <div style="
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-            align-self:flex-start;
-            margin-bottom:24px;
-            padding:8px 12px;
-            border:1px solid #E8DDD4;
-            border-radius:999px;
-            background:#F7F2EA;
-            color:#6F6260;
-            font-size:12px;
-            font-weight:600;
-          ">
-            <span style="
-              display:inline-flex;
-              align-items:center;
-              justify-content:center;
-              width:18px;
-              height:18px;
-              border-radius:50%;
-              background:#560B14;
-              color:#F7F2EA;
-              font-size:11px;
-            ">✓</span>
+      <div class="kablet-offer-layout">
+        <section class="kablet-offer-copy">
+          <div class="kablet-badge">
+            <span>✦</span>
             Recommended next step
           </div>
 
-          <h2 style="
-            margin:0 0 18px;
-            max-width:520px;
-            color:#171414;
-            font-size:clamp(28px,3.2vw,42px);
-            line-height:1.08;
-            letter-spacing:-1.5px;
-          ">
-            ${escapeHtml(opportunity.headline || opportunity.name || 'A relevant option for you')}
-          </h2>
+          <h2>${escapeHtml(headline)}</h2>
 
-          <p style="
-            margin:0 0 26px;
-            max-width:500px;
-            color:#6F6260;
-            font-size:18px;
-            line-height:1.55;
-          ">
-            ${escapeHtml(opportunity.description || 'You may also benefit from this relevant business solution.')}
+          <p class="kablet-description">
+            ${escapeHtml(description)}
           </p>
 
-          <div style="
-            margin-bottom:26px;
-            padding:17px 18px;
-            border:1px solid #E8DDD4;
-            border-radius:14px;
-            background:rgba(247,242,234,.55);
-            color:#560B14;
-            font-size:14px;
-            line-height:1.5;
-          ">
-            <span style="font-weight:700;">✓</span>
-            ${escapeHtml(benefit)}
+          <div class="kablet-benefit">
+            <span>✓</span>
+            <span>${escapeHtml(benefit)}</span>
           </div>
 
-          <button id="kablet-accept" type="button"
-            style="
-              width:100%;
-              min-height:56px;
-              border:0;
-              border-radius:12px;
-              background:#560B14;
-              color:#F7F2EA;
-              cursor:pointer;
-              font-size:16px;
-              font-weight:700;
-            ">
-            ${escapeHtml(opportunity.ctaLabel || 'Get options')} →
+          <button id="kablet-accept" class="kablet-accept" type="button">
+            ${escapeHtml(ctaText)} <span>→</span>
           </button>
 
-          <button id="kablet-decline" type="button"
-            style="
-              width:100%;
-              margin-top:14px;
-              padding:8px;
-              border:0;
-              background:transparent;
-              color:#6F6260;
-              cursor:pointer;
-              font-size:13px;
-              text-decoration:underline;
-            ">
+          <button id="kablet-decline" class="kablet-decline" type="button">
             No thanks, I'll do this later
           </button>
 
-          <p style="
-            margin:24px 0 0;
-            color:#6F6260;
-            font-size:12px;
-            line-height:1.5;
-          ">
-            🔒 Your details are only shared with relevant providers after you choose to continue.
+          <p class="kablet-privacy">
+            Your details are only shared with relevant providers after you choose to continue.
           </p>
-        </div>
 
-        <div style="
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          height:100%;
-min-height:0;
-box-sizing:border-box;
-padding:24px;
-overflow:hidden;
-background:#F7F2EA;
-          background:#F7F2EA;
-        ">
-          ${
-            image
-              ? `<img src="${escapeHtml(image)}" alt="" style="
-                  width:100%;
-                  height:100%;
-                  max-height:450px;
-                  object-fit:cover;
-                  border-radius:18px;
-                ">`
-              : `<div style="
-                  display:flex;
-                  align-items:center;
-                  justify-content:center;
-                  width:100%;
-                  height:100%;
-                  min-height:300px;
-                  border-radius:18px;
-                  background:#CFC5BD;
-                  color:#560B14;
-                  font-size:70px;
-                ">✦</div>`
-          }
-        </div>
-      </div>
+          <div class="kablet-footer">
+            <span>Powered by <strong>Kablet</strong></span>
+            <span class="kablet-footer-privacy">Privacy</span>
+          </div>
+        </section>
 
-      <div style="
-        position:absolute;
-left:0;
-bottom:0;
-width:50%;
-box-sizing:border-box;
-display:flex;
-justify-content:space-between;
-gap:16px;
-padding:16px 28px;
-border-top:1px solid #E8DDD4;
-background:#FBF8F5;
-color:#6F6260;
-font-size:12px;
-      ">
-        <span>✓ Connecting you with relevant business solution providers.</span>
-        <strong style="color:#560B14;">Powered by Kablet</strong>
+        <section class="kablet-offer-visual">
+          ${imageMarkup}
+        </section>
       </div>
     `
 
+    const style = document.createElement('style')
+
+    style.textContent = `
+      #kablet-offer-overlay {
+        position:fixed;
+        inset:0;
+        z-index:999999;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+        box-sizing:border-box;
+        background:rgba(23,20,20,.72);
+        backdrop-filter:blur(5px);
+        font-family:Arial,sans-serif;
+      }
+
+      #kablet-offer-modal {
+        position:relative;
+        width:min(900px,100%);
+        height:560px;
+        max-height:calc(100vh - 40px);
+        overflow:hidden;
+        box-sizing:border-box;
+        background:#FBF8F5;
+        border-radius:24px;
+        color:#171414;
+        box-shadow:0 30px 80px rgba(23,20,20,.3);
+      }
+
+      #kablet-offer-modal *,
+      #kablet-offer-modal *::before,
+      #kablet-offer-modal *::after {
+        box-sizing:border-box;
+      }
+
+      .kablet-close {
+        position:absolute;
+        top:18px;
+        right:20px;
+        z-index:3;
+        width:40px;
+        height:40px;
+        border:0;
+        background:transparent;
+        color:#171414;
+        font-size:30px;
+        line-height:1;
+        cursor:pointer;
+      }
+
+      .kablet-offer-layout {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        width:100%;
+        height:100%;
+      }
+
+      .kablet-offer-copy {
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        min-width:0;
+        padding:42px 40px 76px;
+      }
+
+      .kablet-badge {
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        align-self:flex-start;
+        margin-bottom:24px;
+        padding:9px 13px;
+        border:1px solid #E8DDD4;
+        border-radius:999px;
+        background:#F7F2EA;
+        color:#560B14;
+        font-size:13px;
+        font-weight:600;
+      }
+
+      .kablet-badge span {
+        font-size:18px;
+      }
+
+      .kablet-offer-copy h2 {
+        max-width:390px;
+        margin:0 0 18px;
+        color:#171414;
+        font-size:42px;
+        line-height:1.05;
+        letter-spacing:-1.5px;
+      }
+
+      .kablet-description {
+        max-width:410px;
+        margin:0 0 24px;
+        color:#6F6260;
+        font-size:17px;
+        line-height:1.45;
+      }
+
+      .kablet-benefit {
+        display:flex;
+        align-items:flex-start;
+        gap:10px;
+        max-width:410px;
+        margin-bottom:24px;
+        padding:15px 16px;
+        border:1px solid #E8DDD4;
+        border-radius:13px;
+        background:#FBF8F5;
+        color:#560B14;
+        font-size:13px;
+        line-height:1.4;
+      }
+
+      .kablet-benefit > span:first-child {
+        font-size:18px;
+        font-weight:bold;
+      }
+
+      .kablet-accept {
+        width:100%;
+        max-width:410px;
+        min-height:54px;
+        border:0;
+        border-radius:12px;
+        background:#560B14;
+        color:#F7F2EA;
+        cursor:pointer;
+        font-size:16px;
+        font-weight:700;
+      }
+
+      .kablet-accept span {
+        margin-left:8px;
+        font-size:20px;
+      }
+
+      .kablet-decline {
+        width:100%;
+        max-width:410px;
+        margin-top:12px;
+        padding:8px;
+        border:0;
+        background:transparent;
+        color:#6F6260;
+        cursor:pointer;
+        font-size:13px;
+        text-decoration:underline;
+      }
+
+      .kablet-privacy {
+        max-width:410px;
+        margin:20px 0 0;
+        color:#6F6260;
+        font-size:11px;
+        line-height:1.45;
+      }
+
+      .kablet-footer {
+        position:absolute;
+        bottom:0;
+        left:0;
+        display:flex;
+        justify-content:space-between;
+        width:50%;
+        padding:15px 40px;
+        border-top:1px solid #E8DDD4;
+        color:#8A7D78;
+        font-size:11px;
+      }
+
+      .kablet-footer strong {
+        color:#560B14;
+      }
+
+      .kablet-footer-privacy {
+        text-decoration:underline;
+      }
+
+      .kablet-offer-visual {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        min-width:0;
+        height:100%;
+        padding:24px;
+        overflow:hidden;
+        background:#F7F2EA;
+      }
+
+      .kablet-offer-image,
+      .kablet-image-placeholder {
+        display:block;
+        width:100%;
+        height:100%;
+        max-height:512px;
+        border-radius:18px;
+        object-fit:cover;
+      }
+
+      .kablet-image-placeholder {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#CFC5BD;
+        color:#560B14;
+        font-size:72px;
+      }
+
+      @media (max-width:767px) {
+        #kablet-offer-overlay {
+          align-items:center;
+          padding:12px;
+        }
+
+        #kablet-offer-modal {
+          width:100%;
+          height:auto;
+          max-height:calc(100vh - 24px);
+          overflow:hidden;
+          border-radius:22px;
+        }
+
+        .kablet-offer-layout {
+          display:flex;
+          flex-direction:column;
+          height:auto;
+        }
+
+        .kablet-offer-visual {
+          order:1;
+          width:100%;
+          height:170px;
+          min-height:170px;
+          padding:14px;
+        }
+
+        .kablet-offer-image,
+        .kablet-image-placeholder {
+          height:142px;
+          max-height:142px;
+          border-radius:14px;
+        }
+
+        .kablet-offer-copy {
+          order:2;
+          padding:20px 20px 60px;
+        }
+
+        .kablet-badge {
+          margin-bottom:16px;
+          padding:7px 11px;
+          font-size:12px;
+        }
+
+        .kablet-offer-copy h2 {
+          max-width:none;
+          margin-bottom:12px;
+          font-size:30px;
+          line-height:1.05;
+          letter-spacing:-.8px;
+        }
+
+        .kablet-description {
+          margin-bottom:16px;
+          font-size:15px;
+          line-height:1.4;
+        }
+
+        .kablet-benefit {
+          margin-bottom:16px;
+          padding:12px 13px;
+          font-size:12px;
+        }
+
+        .kablet-accept {
+          min-height:52px;
+        }
+
+        .kablet-privacy {
+          margin-top:14px;
+          font-size:10px;
+        }
+
+        .kablet-footer {
+          left:0;
+          bottom:0;
+          width:100%;
+          padding:12px 20px;
+          font-size:10px;
+        }
+      }
+    `
+
+    document.head.appendChild(style)
     overlay.appendChild(modal)
     document.body.appendChild(overlay)
 
-    const closeOverlay = function () {
+    function close() {
       overlay.remove()
+      style.remove()
     }
 
-    modal.querySelector('#kablet-close').addEventListener('click', closeOverlay)
-    modal.querySelector('#kablet-decline').addEventListener('click', closeOverlay)
+    modal.querySelector('#kablet-close').addEventListener('click', close)
+    modal.querySelector('#kablet-decline').addEventListener('click', close)
 
     modal.querySelector('#kablet-accept').addEventListener('click', function () {
       const button = modal.querySelector('#kablet-accept')
-
       button.disabled = true
       button.textContent = 'Saving...'
 
@@ -373,159 +528,74 @@ font-size:12px;
           return response.json()
         })
         .then(function () {
-  modal.innerHTML = `
-    <div style="
-      min-height:420px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      padding:48px 28px;
-      text-align:center;
-    ">
-      <div style="
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:64px;
-        height:64px;
-        margin-bottom:22px;
-        border-radius:50%;
-        background:#560B14;
-        color:#F7F2EA;
-        font-size:32px;
-      ">✓</div>
+          modal.innerHTML = `
+            <div style="
+              min-height:420px;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              flex-direction:column;
+              padding:40px;
+              text-align:center;
+            ">
+              <div style="
+                width:60px;
+                height:60px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                margin-bottom:20px;
+                border-radius:50%;
+                background:#560B14;
+                color:#F7F2EA;
+                font-size:30px;
+              ">✓</div>
 
-      <h2 style="
-        margin:0 0 12px;
-        color:#171414;
-        font-size:30px;
-      ">
-        You’re all set
-      </h2>
+              <h2 style="
+                margin:0 0 12px;
+                color:#171414;
+                font-size:30px;
+              ">You're all set</h2>
 
-      <p style="
-        max-width:420px;
-        margin:0;
-        color:#6F6260;
-        font-size:16px;
-        line-height:1.6;
-      ">
-        Your request has been recorded. A relevant provider may contact you shortly.
-      </p>
+              <p style="
+                max-width:360px;
+                margin:0;
+                color:#6F6260;
+                font-size:15px;
+                line-height:1.5;
+              ">
+                Your request has been recorded. A relevant provider may contact you shortly.
+              </p>
 
-      <button id="kablet-confirm-close" type="button"
-        style="
-          margin-top:28px;
-          padding:13px 28px;
-          border:0;
-          border-radius:12px;
-          background:#560B14;
-          color:#F7F2EA;
-          cursor:pointer;
-          font-size:15px;
-          font-weight:700;
-        ">
-        Close
-      </button>
-    </div>
-  `
+              <button type="button" id="kablet-confirm-close"
+                style="
+                  margin-top:24px;
+                  padding:12px 26px;
+                  border:0;
+                  border-radius:10px;
+                  background:#560B14;
+                  color:#F7F2EA;
+                  cursor:pointer;
+                  font-weight:700;
+                ">
+                Close
+              </button>
+            </div>
+          `
 
-  modal
-    .querySelector('#kablet-confirm-close')
-    .addEventListener('click', function () {
-      overlay.remove()
+          modal
+            .querySelector('#kablet-confirm-close')
+            .addEventListener('click', close)
+        })
+        .catch(function (error) {
+          console.warn('Kablet widget: consent failed', error)
+          button.disabled = false
+          button.textContent = `${ctaText} →`
+        })
     })
-})
-.catch(function (error) {
-  console.warn('Kablet widget: consent failed', error)
-  button.disabled = false
-  button.textContent = `${opportunity.ctaLabel || 'Get options'} →`
-    alert('Something went wrong. Please try again.')
-})
-    })
-    
-    const mobileStyle = document.createElement('style')
-                mobileStyle.textContent = `
-      @media (max-width: 767px) {
-        #kablet-offer-overlay {
-          align-items:center !important;
-          padding:12px !important;
-        }
-
-        #kablet-offer-overlay > div {
-  width:100% !important;
-  height:auto !important;
-  max-height:calc(100vh - 24px) !important;
-  overflow:hidden !important;
-          border-radius:22px !important;
-        }
-
-        #kablet-offer-overlay > div > div:first-of-type {
-          display:flex !important;
-          flex-direction:column !important;
-          height:auto !important;
-          min-height:0 !important;
-        }
-
-        #kablet-offer-overlay > div > div:first-of-type > div:first-child {
-          order:2 !important;
-          padding:22px 20px 18px !important;
-        }
-
-        #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) {
-          order:1 !important;
-          width:100% !important;
-          height:180px !important;
-          min-height:180px !important;
-          padding:16px !important;
-          overflow:hidden !important;
-        }
-
-        #kablet-offer-overlay > div > div:first-of-type > div:nth-child(2) img {
-          width:100% !important;
-          height:148px !important;
-          object-fit:cover !important;
-        }
-
-        #kablet-offer-overlay h2 {
-          font-size:30px !important;
-          line-height:1.05 !important;
-          margin-bottom:14px !important;
-        }
-
-        #kablet-offer-overlay p {
-          font-size:15px !important;
-          line-height:1.4 !important;
-        }
-
-        #kablet-offer-overlay > div > div:last-of-type {
-          padding:12px 18px !important;
-        }
-
-        #kablet-offer-overlay > div > div:last-of-type {
-  position:static !important;
-  width:100% !important;
-}
-      }
-    `
-
-    document.head.appendChild(mobileStyle)
   }
 
-  function escapeHtml(value) {
-    return String(value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;')
-  }
-
-  // Standard HTML forms.
-    document.addEventListener('submit', function (event) {
-    console.log('Kablet: submit event detected', event.target)
-
+  document.addEventListener('submit', function (event) {
     const form = event.target
 
     if (form && form.tagName === 'FORM') {
@@ -535,10 +605,7 @@ font-size:12px;
     }
   })
 
-  // Contact Form 7 successful submission event.
-    document.addEventListener('wpcf7mailsent', function (event) {
-    console.log('Kablet: CF7 success event detected', event.target)
-
+  document.addEventListener('wpcf7mailsent', function (event) {
     const form = event.target
 
     if (form && form.tagName === 'FORM') {
@@ -546,16 +613,11 @@ font-size:12px;
     }
   })
 
-    // Generic AJAX form detection.
-  // Only react when an AJAX success message appears.
-  // Do not process forms merely because they were added to the page.
   if (window.MutationObserver) {
-    const ajaxObserver = new MutationObserver(function (mutations) {
+    const observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
         mutation.addedNodes.forEach(function (node) {
-          if (node.nodeType !== Node.ELEMENT_NODE) {
-            return
-          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return
 
           const successSelectors = [
             '.success',
@@ -568,7 +630,7 @@ font-size:12px;
             '.gform_confirmation_message',
             '.elementor-message-success',
             '.formidable_message',
-            '.ff-message-success'
+            '.ff-message-success',
           ]
 
           const successDetected = successSelectors.some(function (selector) {
@@ -578,9 +640,7 @@ font-size:12px;
             )
           })
 
-          if (!successDetected) {
-            return
-          }
+          if (!successDetected) return
 
           const form =
             (node.closest && node.closest('form')) ||
@@ -595,9 +655,9 @@ font-size:12px;
       })
     })
 
-    ajaxObserver.observe(document.body, {
+    observer.observe(document.documentElement, {
       childList: true,
-      subtree: true
+      subtree: true,
     })
   }
 })()
