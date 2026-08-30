@@ -130,8 +130,8 @@ customer: {
     modal.style.cssText = `
       position:relative;
       width:min(900px,100%);
-      max-height:90vh;
-      overflow:auto;
+      height:min(560px,calc(100vh - 32px));
+overflow:hidden;
       background:#FBF8F5;
       border-radius:24px;
       color:#171414;
@@ -165,7 +165,7 @@ customer: {
       <div style="
         display:grid;
         grid-template-columns:1fr 1fr;
-        min-height:420px;
+        height:420px;
       ">
         <div style="
           display:flex;
@@ -280,8 +280,9 @@ customer: {
           display:flex;
           align-items:center;
           justify-content:center;
-          min-height:300px;
+          height:320px;
 padding:24px;
+overflow:hidden;
           background:#F7F2EA;
         ">
           ${
@@ -434,7 +435,7 @@ padding:24px;
     })
     
     const mobileStyle = document.createElement('style')
-    mobileStyle.textContent = `
+        mobileStyle.textContent = `
       @media (max-width: 767px) {
         #kablet-offer-overlay {
           padding:12px !important;
@@ -442,20 +443,28 @@ padding:24px;
 
         #kablet-offer-overlay > div {
           grid-template-columns:1fr !important;
-          min-height:0 !important;
+          height:auto !important;
+          max-height:calc(100vh - 24px) !important;
+          overflow:hidden !important;
         }
 
         #kablet-offer-overlay > div > div:first-child {
-          padding:42px 22px 26px !important;
+          padding:28px 22px 20px !important;
         }
 
         #kablet-offer-overlay > div > div:nth-child(2) {
+          order:-1;
+          height:180px !important;
           min-height:180px !important;
           padding:18px !important;
+          overflow:hidden !important;
         }
 
         #kablet-offer-overlay > div > div:nth-child(2) img {
-          max-height:180px !important;
+          width:100% !important;
+          height:144px !important;
+          max-height:144px !important;
+          object-fit:cover !important;
         }
       }
     `
