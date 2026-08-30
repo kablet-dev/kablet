@@ -129,7 +129,7 @@ customer: {
 
     modal.style.cssText = `
       position:relative;
-      width:min(1080px,100%);
+      width:min(900px,100%);
       max-height:90vh;
       overflow:auto;
       background:#FBF8F5;
@@ -165,13 +165,13 @@ customer: {
       <div style="
         display:grid;
         grid-template-columns:1fr 1fr;
-        min-height:520px;
+        min-height:420px;
       ">
         <div style="
           display:flex;
           flex-direction:column;
           justify-content:center;
-          padding:56px 52px 42px;
+          padding:40px 40px 32px;
         ">
           <div style="
             display:inline-flex;
@@ -205,7 +205,7 @@ customer: {
             margin:0 0 18px;
             max-width:520px;
             color:#171414;
-            font-size:clamp(30px,4vw,50px);
+            font-size:clamp(28px,3.2vw,42px);
             line-height:1.08;
             letter-spacing:-1.5px;
           ">
@@ -280,8 +280,8 @@ customer: {
           display:flex;
           align-items:center;
           justify-content:center;
-          min-height:360px;
-          padding:32px;
+          min-height:300px;
+padding:24px;
           background:#F7F2EA;
         ">
           ${
