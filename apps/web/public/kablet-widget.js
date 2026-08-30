@@ -392,7 +392,8 @@ padding:13px 16px;
         height:100%;
         max-height:512px;
         border-radius:18px;
-        object-fit:cover;
+        object-fit:contain;
+background:#F7F2EA;
       }
 
       .kablet-image-placeholder {
