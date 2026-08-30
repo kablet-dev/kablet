@@ -36,8 +36,11 @@
     return fields
   }
 
-  function sendIntent(form) {
+    function sendIntent(form) {
+    console.log('Kablet: sendIntent called', form)
+
     if (!form || processedForms.has(form)) {
+      console.log('Kablet: form skipped', form)
       return
     }
 
@@ -468,7 +471,9 @@ customer: {
   }
 
   // Standard HTML forms.
-  document.addEventListener('submit', function (event) {
+    document.addEventListener('submit', function (event) {
+    console.log('Kablet: submit event detected', event.target)
+
     const form = event.target
 
     if (form && form.tagName === 'FORM') {
@@ -479,7 +484,9 @@ customer: {
   })
 
   // Contact Form 7 successful submission event.
-  document.addEventListener('wpcf7mailsent', function (event) {
+    document.addEventListener('wpcf7mailsent', function (event) {
+    console.log('Kablet: CF7 success event detected', event.target)
+
     const form = event.target
 
     if (form && form.tagName === 'FORM') {
