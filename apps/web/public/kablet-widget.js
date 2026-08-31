@@ -822,6 +822,142 @@
           display: none;
         }
       }
+              /* Final host-site protection */
+      #kablet-offer-overlay #kablet-offer-modal .kablet-copy {
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:center !important;
+        padding:52px 48px 44px !important;
+        margin:0 !important;
+        min-width:0 !important;
+        width:auto !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-copy h2 {
+        display:block !important;
+        max-width:440px !important;
+        margin:0 0 18px !important;
+        padding:0 !important;
+        color:#171414 !important;
+        font-family:Inter,Arial,sans-serif !important;
+        font-size:clamp(38px,4vw,52px) !important;
+        font-weight:750 !important;
+        line-height:1.03 !important;
+        letter-spacing:-.045em !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-description {
+        display:block !important;
+        max-width:450px !important;
+        margin:0 0 22px !important;
+        padding:0 !important;
+        color:#6F6260 !important;
+        font-family:Inter,Arial,sans-serif !important;
+        font-size:17px !important;
+        line-height:1.55 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-badge {
+        display:inline-flex !important;
+        align-self:flex-start !important;
+        margin:0 0 25px !important;
+        padding:8px 13px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-benefit {
+        display:flex !important;
+        max-width:450px !important;
+        margin:0 0 20px !important;
+        padding:16px 18px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-accept {
+        display:flex !important;
+        width:100% !important;
+        max-width:450px !important;
+        min-height:58px !important;
+        margin:0 !important;
+        padding:0 20px !important;
+        border:0 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-decline {
+        display:block !important;
+        align-self:center !important;
+        margin:11px 0 0 !important;
+        padding:7px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-privacy {
+        display:flex !important;
+        max-width:450px !important;
+        margin:16px 0 0 !important;
+        padding:0 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-state-grid {
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) minmax(360px,.92fr) !important;
+        min-height:520px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+        display:flex !important;
+        width:100% !important;
+        min-height:58px !important;
+        margin:0 !important;
+        padding:18px 28px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-visual {
+        display:flex !important;
+        min-height:520px !important;
+        margin:0 !important;
+        padding:28px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-confirm-copy {
+        padding:52px 48px 44px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-confirm-visual {
+        display:flex !important;
+        min-height:520px !important;
+        padding:28px !important;
+      }
+
+      @media (max-width:767px) {
+        #kablet-offer-overlay #kablet-offer-modal .kablet-state-grid {
+          display:flex !important;
+          flex-direction:column !important;
+          min-height:0 !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-copy,
+        #kablet-offer-overlay #kablet-offer-modal .kablet-confirm-copy {
+          order:1 !important;
+          padding:26px 20px 25px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-visual,
+        #kablet-offer-overlay #kablet-offer-modal .kablet-confirm-visual {
+          order:2 !important;
+          min-height:190px !important;
+          padding:14px 20px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-copy h2,
+        #kablet-offer-overlay #kablet-offer-modal .kablet-confirm-copy h2 {
+          max-width:none !important;
+          font-size:33px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+          order:3 !important;
+          min-height:48px !important;
+          padding:14px 20px !important;
+        }
+      }
     `
 
     document.head.appendChild(style)
