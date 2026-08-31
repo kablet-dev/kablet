@@ -1,40 +1,54 @@
 (function () {
   'use strict'
 
-  const script =
+  var script =
     document.currentScript ||
     Array.from(document.scripts).find(function (item) {
-      return item.src.includes('kablet-widget.js')
+      return item.src.indexOf('kablet-widget.js') !== -1
     })
 
   if (!script) return
 
-  const scriptUrl = new URL(script.src, window.location.href)
-  const siteId = scriptUrl.searchParams.get('site')
+  var scriptUrl = new URL(script.src, window.location.href)
+  var siteId = scriptUrl.searchParams.get('site')
 
   if (!siteId) {
     console.warn('Kablet widget: site ID is missing')
     return
   }
 
-  const API_URL = 'https://kablet-backend.onrender.com'
-  const processedForms = new WeakSet()
+  console.log('Kablet widget loaded')
+
+  var API_URL = 'https://kablet-backend.onrender.com'
+  var processedForms = new WeakSet()
 
   function escapeHtml(value) {
-    return String(value ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;')
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
   }
 
   function readForm(form) {
-    const fields = {}
+    var fields = {}
+
     new FormData(form).forEach(function (value, key) {
       fields[key] = String(value)
     })
+
     return fields
+  }
+
+  function getCustomerEmail(fields) {
+    return (
+      fields.email ||
+      fields['your-email'] ||
+      fields['user-email'] ||
+      fields.customer_email ||
+      ''
+    )
   }
 
   function sendIntent(form) {
@@ -42,9 +56,12 @@
 
     processedForms.add(form)
 
-    const fields = readForm(form)
+    var fields = readForm(form)
+    var customerEmail = getCustomerEmail(fields)
 
-    fetch(`${API_URL}/intent/events`, {
+    console.log('Kablet: sending intent', form)
+
+    fetch(API_URL + '/intent/events', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +86,7 @@
             fields['your-name'] ||
             null,
           lastName: fields.lastName || fields.last_name || null,
-          email: fields.email || fields['your-email'] || null,
+          email: customerEmail || null,
           phone: fields.phone || fields.tel || null,
         },
         company: {
@@ -77,28 +94,24 @@
           industry: fields.industry || null,
         },
         structuredContext: {
-          fields,
+          fields: fields,
         },
       }),
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error(`Intent request failed: ${response.status}`)
+          throw new Error('Intent request failed: ' + response.status)
         }
 
         return response.json()
       })
       .then(function (result) {
-        if (result.opportunity) {
-          result.opportunity.intentEventId = result.intentEventId
-          result.opportunity.customerEmail =
-  fields.email ||
-  fields['your-email'] ||
-  fields['user-email'] ||
-  ''
+        if (!result.opportunity) return
 
-showOffer(result.opportunity)
-        }
+        result.opportunity.intentEventId = result.intentEventId
+        result.opportunity.customerEmail = customerEmail
+
+        showOffer(result.opportunity)
       })
       .catch(function (error) {
         console.warn('Kablet widget: intent failed', error)
@@ -108,95 +121,66 @@ showOffer(result.opportunity)
   function showOffer(opportunity) {
     if (document.getElementById('kablet-offer-overlay')) return
 
-    const imageUrl =
+    var imageUrl =
       opportunity.imageUrl ||
       opportunity.visualAssetUrl ||
       opportunity.visual_asset_url ||
       ''
 
-    const headline =
+    var headline =
       opportunity.headline ||
       opportunity.name ||
       'You may also need a relevant business solution'
 
-    const description =
+    var description =
       opportunity.description ||
       'Explore a relevant option for your business.'
 
-    const benefit =
+    var benefit =
       opportunity.benefit ||
       opportunity.valueProposition ||
       'Get connected with relevant providers and compare your options.'
 
-    const ctaText = opportunity.ctaLabel || 'Get options'
+    var ctaText = opportunity.ctaLabel || 'Get options'
 
-    const overlay = document.createElement('div')
+    var overlay = document.createElement('div')
     overlay.id = 'kablet-offer-overlay'
 
-    const modal = document.createElement('div')
+    var modal = document.createElement('div')
     modal.id = 'kablet-offer-modal'
 
-    const imageMarkup = imageUrl
-      ? `
-        <img
-          src="${escapeHtml(imageUrl)}"
-          alt=""
-          class="kablet-offer-image"
-        >
-      `
-      : `
-        <div class="kablet-image-placeholder">✦</div>
-      `
+    var imageMarkup = imageUrl
+      ? '<img class="kablet-offer-image" src="' +
+        escapeHtml(imageUrl) +
+        '" alt="">'
+      : '<div class="kablet-image-placeholder">✦</div>'
 
-    modal.innerHTML = `
-      <button
-        id="kablet-close"
-        class="kablet-close"
-        type="button"
-        aria-label="Close"
-      >×</button>
+    modal.innerHTML =
+      '<button id="kablet-close" class="kablet-close" type="button" aria-label="Close">×</button>' +
+      '<div class="kablet-offer-layout">' +
+      '<section class="kablet-offer-copy">' +
+      '<div class="kablet-badge"><span>✦</span>Recommended next step</div>' +
+      '<h2>' +
+      escapeHtml(headline) +
+      '</h2>' +
+      '<p class="kablet-description">' +
+      escapeHtml(description) +
+      '</p>' +
+      '<div class="kablet-benefit"><span>✓</span><span>' +
+      escapeHtml(benefit) +
+      '</span></div>' +
+      '<button id="kablet-accept" class="kablet-accept" type="button">' +
+      escapeHtml(ctaText) +
+      ' <span>→</span></button>' +
+      '<button id="kablet-decline" class="kablet-decline" type="button">No thanks, I’ll do this later</button>' +
+      '<div class="kablet-footer"><span>🔒 Shared only after you choose to continue.</span><span>Powered by <strong>Kablet</strong></span></div>' +
+      '</section>' +
+      '<section class="kablet-offer-visual">' +
+      imageMarkup +
+      '</section>' +
+      '</div>'
 
-      <div class="kablet-offer-layout">
-        <section class="kablet-offer-copy">
-          <div class="kablet-badge">
-            <span>✦</span>
-            Recommended next step
-          </div>
-
-          <h2>${escapeHtml(headline)}</h2>
-
-          <p class="kablet-description">
-            ${escapeHtml(description)}
-          </p>
-
-          <div class="kablet-benefit">
-            <span>✓</span>
-            <span>${escapeHtml(benefit)}</span>
-          </div>
-
-          <button id="kablet-accept" class="kablet-accept" type="button">
-            ${escapeHtml(ctaText)} <span>→</span>
-          </button>
-
-          <button id="kablet-decline" class="kablet-decline" type="button">
-            No thanks, I'll do this later
-          </button>
-
-          
-
-          <div class="kablet-footer">
-  <span>🔒 Shared only after you choose to continue.</span>
-  <span>Powered by <strong>Kablet</strong></span>
-</div>
-        </section>
-
-        <section class="kablet-offer-visual">
-          ${imageMarkup}
-        </section>
-      </div>
-    `
-
-    const style = document.createElement('style')
+    var style = document.createElement('style')
 
     style.textContent = `
       #kablet-offer-overlay {
@@ -207,7 +191,6 @@ showOffer(result.opportunity)
         align-items:center;
         justify-content:center;
         padding:20px;
-        box-sizing:border-box;
         background:rgba(23,20,20,.72);
         backdrop-filter:blur(5px);
         font-family:Arial,sans-serif;
@@ -217,10 +200,9 @@ showOffer(result.opportunity)
         position:relative;
         width:min(900px,100%);
         height:620px;
-max-height:calc(100vh - 32px);
+        max-height:calc(100vh - 32px);
         overflow:hidden;
-        box-sizing:border-box;
-        background:#FBF8F5;
+        background:#fbf8f5;
         border-radius:24px;
         color:#171414;
         box-shadow:0 30px 80px rgba(23,20,20,.3);
@@ -234,17 +216,17 @@ max-height:calc(100vh - 32px);
 
       .kablet-close {
         position:absolute;
-        top:18px;
+        top:17px;
         right:20px;
-        z-index:3;
+        z-index:5;
         width:40px;
         height:40px;
         border:0;
         background:transparent;
         color:#171414;
-        font-size:30px;
-        line-height:1;
         cursor:pointer;
+        font-size:32px;
+        line-height:1;
       }
 
       .kablet-offer-layout {
@@ -255,11 +237,12 @@ max-height:calc(100vh - 32px);
       }
 
       .kablet-offer-copy {
+        position:relative;
         display:flex;
         flex-direction:column;
         justify-content:center;
         min-width:0;
-        padding:34px 40px 92px;
+        padding:42px 40px 88px;
       }
 
       .kablet-badge {
@@ -269,10 +252,10 @@ max-height:calc(100vh - 32px);
         align-self:flex-start;
         margin-bottom:24px;
         padding:9px 13px;
-        border:1px solid #E8DDD4;
+        border:1px solid #e8ddd4;
         border-radius:999px;
-        background:#F7F2EA;
-        color:#560B14;
+        background:#f7f2ea;
+        color:#560b14;
         font-size:13px;
         font-weight:600;
       }
@@ -284,7 +267,6 @@ max-height:calc(100vh - 32px);
       .kablet-offer-copy h2 {
         max-width:390px;
         margin:0 0 18px;
-        color:#171414;
         font-size:38px;
         line-height:1.05;
         letter-spacing:-1.5px;
@@ -293,22 +275,20 @@ max-height:calc(100vh - 32px);
       .kablet-description {
         max-width:410px;
         margin:0 0 18px;
-        color:#6F6260;
+        color:#6f6260;
         font-size:17px;
         line-height:1.45;
       }
 
       .kablet-benefit {
         display:flex;
-        align-items:flex-start;
         gap:10px;
         max-width:410px;
         margin-bottom:18px;
-padding:13px 16px;
-        border:1px solid #E8DDD4;
+        padding:13px 16px;
+        border:1px solid #e8ddd4;
         border-radius:13px;
-        background:#FBF8F5;
-        color:#560B14;
+        color:#560b14;
         font-size:13px;
         line-height:1.4;
       }
@@ -324,14 +304,15 @@ padding:13px 16px;
         min-height:54px;
         border:0;
         border-radius:12px;
-        background:#560B14;
-        color:#F7F2EA;
+        background:#560b14;
+        color:#f7f2ea;
         cursor:pointer;
         font-size:16px;
         font-weight:700;
       }
 
-      .kablet-accept span {
+      .kablet-accept span,
+      .kablet-confirm-return span {
         margin-left:8px;
         font-size:20px;
       }
@@ -343,43 +324,32 @@ padding:13px 16px;
         padding:8px;
         border:0;
         background:transparent;
-        color:#6F6260;
+        color:#6f6260;
         cursor:pointer;
         font-size:13px;
         text-decoration:underline;
       }
 
-      .kablet-privacy {
-        max-width:410px;
-        margin:14px 0 0;
-        color:#6F6260;
-        font-size:11px;
-        line-height:1.45;
-      }
-
       .kablet-footer {
         position:absolute;
+        right:32px;
         bottom:0;
         left:0;
         display:flex;
         justify-content:space-between;
-        width:50%;
         padding:15px 32px;
-align-items:center;
-        border-top:1px solid #E8DDD4;
-        color:#8A7D78;
+        border-top:1px solid #e8ddd4;
+        color:#8a7d78;
         font-size:11px;
       }
 
-      .kablet-footer strong {
-        color:#560B14;
+      .kablet-footer strong,
+      .kablet-confirm-footer strong {
+        color:#560b14;
       }
 
-      .kablet-footer-privacy {
-        text-decoration:underline;
-      }
-
-      .kablet-offer-visual {
+      .kablet-offer-visual,
+      .kablet-confirm-visual {
         display:flex;
         align-items:center;
         justify-content:center;
@@ -387,103 +357,26 @@ align-items:center;
         height:100%;
         padding:24px;
         overflow:hidden;
-        background:#F7F2EA;
+        background:#f7f2ea;
       }
 
       .kablet-offer-image,
       .kablet-image-placeholder {
-        display:block;
-        width:100%;
-        height:100%;
-        max-height:512px;
-        border-radius:18px;
-        object-fit:contain;
-background:#F7F2EA;
-      }
-
-      .kablet-image-placeholder {
         display:flex;
         align-items:center;
         justify-content:center;
-        background:#CFC5BD;
-        color:#560B14;
+        width:100%;
+        height:100%;
+        border-radius:18px;
+        object-fit:contain;
+        background:#cfc5bd;
+      }
+
+      .kablet-image-placeholder {
+        color:#560b14;
         font-size:72px;
       }
 
-      @media (max-width:767px) {
-        #kablet-offer-overlay {
-          align-items:center;
-          padding:12px;
-        }
-
-        #kablet-offer-modal {
-          width:100%;
-          height:auto;
-          max-height:calc(100vh - 24px);
-          overflow:hidden;
-          border-radius:22px;
-        }
-
-        .kablet-offer-layout {
-          display:flex;
-          flex-direction:column;
-          height:auto;
-        }
-
-        .kablet-offer-visual {
-          order:1;
-          width:100%;
-          height:170px;
-          min-height:170px;
-          padding:14px;
-        }
-
-        .kablet-offer-image,
-        .kablet-image-placeholder {
-          height:142px;
-          max-height:142px;
-          border-radius:14px;
-        }
-
-        .kablet-offer-copy {
-          order:2;
-          padding:20px 20px 60px;
-        }
-
-        .kablet-badge {
-          margin-bottom:16px;
-          padding:7px 11px;
-          font-size:12px;
-        }
-
-        .kablet-offer-copy h2 {
-          max-width:none;
-          margin-bottom:12px;
-          font-size:30px;
-          line-height:1.05;
-          letter-spacing:-.8px;
-        }
-
-        .kablet-description {
-          margin-bottom:16px;
-          font-size:15px;
-          line-height:1.4;
-        }
-
-        .kablet-benefit {
-          margin-bottom:16px;
-          padding:12px 13px;
-          font-size:12px;
-        }
-
-        .kablet-accept {
-          min-height:52px;
-        }
-
-        .kablet-privacy {
-          margin-top:14px;
-          font-size:10px;
-        }
       .kablet-confirm-layout {
         display:grid;
         grid-template-columns:1fr 1fr;
@@ -525,13 +418,11 @@ background:#F7F2EA;
         background:#315f3b;
         color:#fff;
         font-size:24px;
-        line-height:1;
       }
 
       .kablet-confirm-copy h2 {
         max-width:390px;
         margin:0 0 22px;
-        color:#171414;
         font-size:40px;
         line-height:1.08;
         letter-spacing:-1.5px;
@@ -583,7 +474,7 @@ background:#F7F2EA;
         display:flex;
         align-items:center;
         justify-content:center;
-        gap:12px;
+        gap:10px;
         width:100%;
         max-width:390px;
         min-height:49px;
@@ -596,18 +487,19 @@ background:#F7F2EA;
         font-weight:700;
       }
 
-      .kablet-confirm-return span {
-        font-size:22px;
+      .kablet-confirm-footer {
+        position:absolute;
+        right:44px;
+        bottom:22px;
+        left:44px;
+        display:flex;
+        justify-content:space-between;
+        color:#8a7d78;
+        font-size:11px;
       }
 
-      .kablet-confirm-visual {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        min-width:0;
-        height:100%;
-        padding:24px;
-        background:#f7f2ea;
+      .kablet-confirm-privacy {
+        text-decoration:underline;
       }
 
       .kablet-confirm-image {
@@ -616,7 +508,6 @@ background:#F7F2EA;
         justify-content:center;
         width:100%;
         height:100%;
-        min-height:0;
         background:#fbf8f5;
       }
 
@@ -633,36 +524,75 @@ background:#F7F2EA;
         box-shadow:0 16px 35px rgba(49,95,59,.14);
       }
 
-      .kablet-confirm-footer {
-        position:absolute;
-        right:44px;
-        bottom:22px;
-        left:44px;
-        display:flex;
-        justify-content:space-between;
-        color:#8a7d78;
-        font-size:11px;
-      }
-
-      .kablet-confirm-footer strong {
-        color:#560b14;
-      }
-
-      .kablet-confirm-privacy {
-        text-decoration:underline;
-      }
-
       @media (max-width:767px) {
-        #kablet-offer-modal {
-          max-height:calc(100vh - 24px);
-          overflow:auto;
+        #kablet-offer-overlay {
+          align-items:center;
+          padding:12px;
         }
 
+        #kablet-offer-modal {
+          width:100%;
+          height:auto;
+          max-height:calc(100vh - 24px);
+          overflow:auto;
+          border-radius:22px;
+        }
+
+        .kablet-offer-layout,
         .kablet-confirm-layout {
           display:flex;
           flex-direction:column;
           height:auto;
-          min-height:100%;
+        }
+
+        .kablet-offer-visual {
+          order:1;
+          width:100%;
+          height:170px;
+          min-height:170px;
+          padding:14px;
+        }
+
+        .kablet-offer-image,
+        .kablet-image-placeholder {
+          height:142px;
+          max-height:142px;
+          border-radius:14px;
+        }
+
+        .kablet-offer-copy {
+          order:2;
+          padding:20px 20px 60px;
+        }
+
+        .kablet-badge {
+          margin-bottom:16px;
+          padding:7px 11px;
+          font-size:12px;
+        }
+
+        .kablet-offer-copy h2 {
+          max-width:none;
+          margin-bottom:12px;
+          font-size:30px;
+        }
+
+        .kablet-description {
+          margin-bottom:16px;
+          font-size:15px;
+        }
+
+        .kablet-benefit {
+          margin-bottom:16px;
+          padding:12px 13px;
+          font-size:12px;
+        }
+
+        .kablet-footer {
+          right:0;
+          width:100%;
+          padding:11px 18px;
+          font-size:9px;
         }
 
         .kablet-confirm-visual {
@@ -689,7 +619,6 @@ background:#F7F2EA;
           max-width:none;
           margin-bottom:18px;
           font-size:34px;
-          line-height:1.06;
         }
 
         .kablet-confirm-message {
@@ -711,22 +640,12 @@ background:#F7F2EA;
           right:22px;
           bottom:22px;
           left:22px;
-          text-align:left;
         }
 
         .kablet-confirm-envelope {
           width:165px;
           height:115px;
           font-size:52px;
-        }
-      }
-        .kablet-footer {
-          left:0;
-          bottom:0;
-          width:100%;
-          padding:11px 18px;
-font-size:9px;
-line-height:1.3;
         }
       }
     `
@@ -744,11 +663,12 @@ line-height:1.3;
     modal.querySelector('#kablet-decline').addEventListener('click', close)
 
     modal.querySelector('#kablet-accept').addEventListener('click', function () {
-      const button = modal.querySelector('#kablet-accept')
+      var button = modal.querySelector('#kablet-accept')
+
       button.disabled = true
       button.textContent = 'Saving...'
 
-      fetch(`${API_URL}/intent/consent`, {
+      fetch(API_URL + '/intent/consent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -764,91 +684,50 @@ line-height:1.3;
       })
         .then(function (response) {
           if (!response.ok) {
-            throw new Error(`Consent request failed: ${response.status}`)
+            throw new Error('Consent request failed: ' + response.status)
           }
 
           return response.json()
         })
         .then(function () {
-  const customerEmail =
-    opportunity.customerEmail || 'your email address'
+          var email =
+            opportunity.customerEmail || 'your email address'
 
-  modal.innerHTML = `
-    <button
-      id="kablet-confirm-close-x"
-      class="kablet-close"
-      type="button"
-      aria-label="Close"
-    >×</button>
+          modal.innerHTML =
+            '<button id="kablet-confirm-close-x" class="kablet-close" type="button" aria-label="Close">×</button>' +
+            '<div class="kablet-confirm-layout">' +
+            '<section class="kablet-confirm-copy">' +
+            '<div class="kablet-confirm-badge"><span>✓</span>Request received</div>' +
+            '<h2>We’ve received<br>your request!</h2>' +
+            '<p class="kablet-confirm-message">We’ll connect you with trusted providers shortly. You can expect to hear from them within the next 48 hours.</p>' +
+            '<div class="kablet-confirm-email"><span class="kablet-confirm-email-icon">✉</span><span>We’ve sent a confirmation to<br><strong>' +
+            escapeHtml(email) +
+            '</strong></span></div>' +
+            '<button id="kablet-confirm-return" class="kablet-confirm-return" type="button">Close & return to website <span>→</span></button>' +
+            '<div class="kablet-confirm-footer"><span>Powered by <strong>Kablet</strong></span><span class="kablet-confirm-privacy">Privacy</span></div>' +
+            '</section>' +
+            '<section class="kablet-confirm-visual"><div class="kablet-confirm-image"><div class="kablet-confirm-envelope">✉</div></div></section>' +
+            '</div>'
 
-    <div class="kablet-confirm-layout">
+          modal
+            .querySelector('#kablet-confirm-close-x')
+            .addEventListener('click', close)
 
-      <section class="kablet-confirm-copy">
-        <div class="kablet-confirm-badge">
-          <span>✓</span>
-          Request received
-        </div>
-
-        <h2>We’ve received<br>your request!</h2>
-
-        <p class="kablet-confirm-message">
-          We’ll connect you with trusted providers shortly.
-          You can expect to hear from them within the next 48 hours.
-        </p>
-
-        <div class="kablet-confirm-email">
-          <span class="kablet-confirm-email-icon">✉</span>
-          <span>
-            We’ve sent a confirmation to<br>
-            <strong>${escapeHtml(customerEmail)}</strong>
-          </span>
-        </div>
-
-        <button
-          id="kablet-confirm-return"
-          class="kablet-confirm-return"
-          type="button"
-        >
-          Close & return to website <span>→</span>
-        </button>
-
-        <div class="kablet-confirm-footer">
-          <span>Powered by <strong>Kablet</strong></span>
-          <span class="kablet-confirm-privacy">Privacy</span>
-        </div>
-      </section>
-
-      <section class="kablet-confirm-visual">
-        <div class="kablet-confirm-image">
-          <div class="kablet-confirm-envelope">✉</div>
-        </div>
-      </section>
-
-    </div>
-  `
-
-  const closeConfirmation = function () {
-    close()
-  }
-
-  modal
-    .querySelector('#kablet-confirm-close-x')
-    .addEventListener('click', closeConfirmation)
-
-    modal
-    .querySelector('#kablet-confirm-return')
-    .addEventListener('click', closeConfirmation)
-})
+          modal
+            .querySelector('#kablet-confirm-return')
+            .addEventListener('click', close)
+        })
         .catch(function (error) {
           console.warn('Kablet widget: consent failed', error)
+
           button.disabled = false
-          button.textContent = `${ctaText} →`
+          button.textContent = ctaText + ' →'
         })
     })
   }
 
   document.addEventListener('submit', function (event) {
-    const form = event.target
+    var form = event.target
 
     if (form && form.tagName === 'FORM') {
       setTimeout(function () {
@@ -858,7 +737,7 @@ line-height:1.3;
   })
 
   document.addEventListener('wpcf7mailsent', function (event) {
-    const form = event.target
+    var form = event.target
 
     if (form && form.tagName === 'FORM') {
       sendIntent(form)
@@ -866,12 +745,12 @@ line-height:1.3;
   })
 
   if (window.MutationObserver) {
-    const observer = new MutationObserver(function (mutations) {
+    var observer = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
         mutation.addedNodes.forEach(function (node) {
           if (node.nodeType !== Node.ELEMENT_NODE) return
 
-          const successSelectors = [
+          var successSelectors = [
             '.success',
             '.form-success',
             '.form-success-message',
@@ -885,7 +764,7 @@ line-height:1.3;
             '.ff-message-success',
           ]
 
-          const successDetected = successSelectors.some(function (selector) {
+          var successDetected = successSelectors.some(function (selector) {
             return (
               (node.matches && node.matches(selector)) ||
               (node.querySelector && node.querySelector(selector))
@@ -894,7 +773,7 @@ line-height:1.3;
 
           if (!successDetected) return
 
-          const form =
+          var form =
             (node.closest && node.closest('form')) ||
             document.querySelector('form')
 
