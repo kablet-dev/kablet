@@ -91,7 +91,13 @@
       .then(function (result) {
         if (result.opportunity) {
           result.opportunity.intentEventId = result.intentEventId
-          showOffer(result.opportunity)
+          result.opportunity.customerEmail =
+  fields.email ||
+  fields['your-email'] ||
+  fields['user-email'] ||
+  ''
+
+showOffer(result.opportunity)
         }
       })
       .catch(function (error) {
@@ -478,7 +484,242 @@ background:#F7F2EA;
           margin-top:14px;
           font-size:10px;
         }
+      .kablet-confirm-layout {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        width:100%;
+        height:100%;
+      }
 
+      .kablet-confirm-copy {
+        position:relative;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        min-width:0;
+        padding:54px 44px 86px;
+      }
+
+      .kablet-confirm-badge {
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+        align-self:flex-start;
+        margin-bottom:32px;
+        padding:9px 15px 9px 9px;
+        border:1px solid #becbbb;
+        border-radius:999px;
+        background:#edf2e9;
+        color:#315b39;
+        font-size:14px;
+        font-weight:700;
+      }
+
+      .kablet-confirm-badge span {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:34px;
+        height:34px;
+        border-radius:50%;
+        background:#315f3b;
+        color:#fff;
+        font-size:24px;
+        line-height:1;
+      }
+
+      .kablet-confirm-copy h2 {
+        max-width:390px;
+        margin:0 0 22px;
+        color:#171414;
+        font-size:40px;
+        line-height:1.08;
+        letter-spacing:-1.5px;
+      }
+
+      .kablet-confirm-message {
+        max-width:390px;
+        margin:0 0 26px;
+        color:#48413e;
+        font-size:17px;
+        font-weight:600;
+        line-height:1.35;
+      }
+
+      .kablet-confirm-email {
+        display:flex;
+        align-items:center;
+        gap:12px;
+        max-width:390px;
+        margin-bottom:18px;
+        padding:10px 14px;
+        border:1px solid #c8cec3;
+        border-radius:7px;
+        background:#eef0eb;
+        color:#686762;
+        font-size:12px;
+        line-height:1.35;
+      }
+
+      .kablet-confirm-email strong {
+        color:#171414;
+        font-size:13px;
+      }
+
+      .kablet-confirm-email-icon {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:28px;
+        height:28px;
+        flex:0 0 28px;
+        border-radius:50%;
+        background:#315f3b;
+        color:#fff;
+        font-size:16px;
+      }
+
+      .kablet-confirm-return {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:12px;
+        width:100%;
+        max-width:390px;
+        min-height:49px;
+        border:1px solid #e4d8cf;
+        border-radius:7px;
+        background:transparent;
+        color:#710914;
+        cursor:pointer;
+        font-size:14px;
+        font-weight:700;
+      }
+
+      .kablet-confirm-return span {
+        font-size:22px;
+      }
+
+      .kablet-confirm-visual {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        min-width:0;
+        height:100%;
+        padding:24px;
+        background:#f7f2ea;
+      }
+
+      .kablet-confirm-image {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:100%;
+        height:100%;
+        min-height:0;
+        background:#fbf8f5;
+      }
+
+      .kablet-confirm-envelope {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:190px;
+        height:135px;
+        border-radius:14px;
+        background:#cfe0cc;
+        color:#315f3b;
+        font-size:66px;
+        box-shadow:0 16px 35px rgba(49,95,59,.14);
+      }
+
+      .kablet-confirm-footer {
+        position:absolute;
+        right:44px;
+        bottom:22px;
+        left:44px;
+        display:flex;
+        justify-content:space-between;
+        color:#8a7d78;
+        font-size:11px;
+      }
+
+      .kablet-confirm-footer strong {
+        color:#560b14;
+      }
+
+      .kablet-confirm-privacy {
+        text-decoration:underline;
+      }
+
+      @media (max-width:767px) {
+        #kablet-offer-modal {
+          max-height:calc(100vh - 24px);
+          overflow:auto;
+        }
+
+        .kablet-confirm-layout {
+          display:flex;
+          flex-direction:column;
+          height:auto;
+          min-height:100%;
+        }
+
+        .kablet-confirm-visual {
+          order:1;
+          width:100%;
+          height:220px;
+          min-height:220px;
+          padding:18px;
+        }
+
+        .kablet-confirm-copy {
+          order:2;
+          justify-content:flex-start;
+          padding:30px 22px 78px;
+          text-align:center;
+        }
+
+        .kablet-confirm-badge {
+          align-self:center;
+          margin-bottom:24px;
+        }
+
+        .kablet-confirm-copy h2 {
+          max-width:none;
+          margin-bottom:18px;
+          font-size:34px;
+          line-height:1.06;
+        }
+
+        .kablet-confirm-message {
+          max-width:none;
+          margin-bottom:22px;
+          font-size:16px;
+        }
+
+        .kablet-confirm-email,
+        .kablet-confirm-return {
+          max-width:none;
+        }
+
+        .kablet-confirm-email {
+          text-align:left;
+        }
+
+        .kablet-confirm-footer {
+          right:22px;
+          bottom:22px;
+          left:22px;
+          text-align:left;
+        }
+
+        .kablet-confirm-envelope {
+          width:165px;
+          height:115px;
+          font-size:52px;
+        }
+      }
         .kablet-footer {
           left:0;
           bottom:0;
@@ -529,65 +770,75 @@ line-height:1.3;
           return response.json()
         })
         .then(function () {
-          modal.innerHTML = `
-            <div style="
-              min-height:420px;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              flex-direction:column;
-              padding:40px;
-              text-align:center;
-            ">
-              <div style="
-                width:60px;
-                height:60px;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                margin-bottom:20px;
-                border-radius:50%;
-                background:#560B14;
-                color:#F7F2EA;
-                font-size:30px;
-              ">✓</div>
+  const customerEmail =
+    opportunity.customerEmail || 'your email address'
 
-              <h2 style="
-                margin:0 0 12px;
-                color:#171414;
-                font-size:30px;
-              ">You're all set</h2>
+  modal.innerHTML = `
+    <button
+      id="kablet-confirm-close-x"
+      class="kablet-close"
+      type="button"
+      aria-label="Close"
+    >×</button>
 
-              <p style="
-                max-width:360px;
-                margin:0;
-                color:#6F6260;
-                font-size:15px;
-                line-height:1.5;
-              ">
-                Your request has been recorded. A relevant provider may contact you shortly.
-              </p>
+    <div class="kablet-confirm-layout">
 
-              <button type="button" id="kablet-confirm-close"
-                style="
-                  margin-top:24px;
-                  padding:12px 26px;
-                  border:0;
-                  border-radius:10px;
-                  background:#560B14;
-                  color:#F7F2EA;
-                  cursor:pointer;
-                  font-weight:700;
-                ">
-                Close
-              </button>
-            </div>
-          `
+      <section class="kablet-confirm-copy">
+        <div class="kablet-confirm-badge">
+          <span>✓</span>
+          Request received
+        </div>
 
-          modal
-            .querySelector('#kablet-confirm-close')
-            .addEventListener('click', close)
-        })
+        <h2>We’ve received<br>your request!</h2>
+
+        <p class="kablet-confirm-message">
+          We’ll connect you with trusted providers shortly.
+          You can expect to hear from them within the next 48 hours.
+        </p>
+
+        <div class="kablet-confirm-email">
+          <span class="kablet-confirm-email-icon">✉</span>
+          <span>
+            We’ve sent a confirmation to<br>
+            <strong>${escapeHtml(customerEmail)}</strong>
+          </span>
+        </div>
+
+        <button
+          id="kablet-confirm-return"
+          class="kablet-confirm-return"
+          type="button"
+        >
+          Close & return to website <span>→</span>
+        </button>
+
+        <div class="kablet-confirm-footer">
+          <span>Powered by <strong>Kablet</strong></span>
+          <span class="kablet-confirm-privacy">Privacy</span>
+        </div>
+      </section>
+
+      <section class="kablet-confirm-visual">
+        <div class="kablet-confirm-image">
+          <div class="kablet-confirm-envelope">✉</div>
+        </div>
+      </section>
+
+    </div>
+  `
+
+  const closeConfirmation = function () {
+    close()
+  }
+
+  modal
+    .querySelector('#kablet-confirm-close-x')
+    .addEventListener('click', closeConfirmation)
+
+    modal
+    .querySelector('#kablet-confirm-return')
+    .addEventListener('click', closeConfirmation)
+})
         .catch(function (error) {
           console.warn('Kablet widget: consent failed', error)
           button.disabled = false
