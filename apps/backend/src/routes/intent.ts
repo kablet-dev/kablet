@@ -220,6 +220,84 @@ export async function intentRoutes(fastify: FastifyInstance) {
       opportunity: engineResult.opportunity,
     })
   })
+  fastify.post('/intent/widget-events', async (request, reply) => {
+    const site = await resolveHostSite(request)
+
+    if (!site) {
+      return reply.status(401).send({
+        error: 'Invalid or missing site identity',
+      })
+    }
+
+    const body = request.body as {
+      eventType?: string
+      intentEventId?: string
+      opportunityInstanceId?: string
+      sessionId?: string
+      pageUrl?: string
+      metadata?: Record<string, unknown>
+    }
+
+    const allowedEvents = [
+      'LOADED',
+      'IMPRESSION',
+      'DISPLAYED',
+      'DISMISSED',
+      'ACCEPTED',
+      'DECLINED',
+      'ERROR',
+    ]
+
+    if (!body.eventType || !allowedEvents.includes(body.eventType)) {
+      return reply.status(400).send({
+        error: 'Invalid widget event type',
+      })
+    }
+
+    if (body.intentEventId) {
+      const { data: intentEvent } = await db
+        .from('intent_events')
+        .select('id')
+        .eq('id', body.intentEventId)
+        .eq('host_site_id', site.id)
+        .single()
+
+      if (!intentEvent) {
+        return reply.status(404).send({
+          error: 'Intent event not found',
+        })
+      }
+    }
+
+    const { data, error } = await db
+      .from('widget_events')
+      .insert({
+        host_site_id: site.id,
+        intent_event_id: body.intentEventId ?? null,
+        opportunity_instance_id: body.opportunityInstanceId ?? null,
+        event_type: body.eventType,
+        session_id: body.sessionId ?? null,
+        metadata: {
+          ...(body.metadata ?? {}),
+          pageUrl: body.pageUrl ?? null,
+        },
+      })
+      .select('id')
+      .single()
+
+    if (error || !data) {
+      fastify.log.error({ error }, 'Widget event insert failed')
+
+      return reply.status(500).send({
+        error: 'Could not save widget event',
+      })
+    }
+
+    return reply.status(201).send({
+      ok: true,
+      eventId: data.id,
+    })
+  })
 
   fastify.post('/intent/consent', async (request, reply) => {
     const site = await resolveHostSite(request)
