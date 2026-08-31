@@ -1063,6 +1063,81 @@
           padding:14px 20px !important;
         }
       }
+              #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+        display:grid !important;
+        grid-template-columns:1fr auto 1fr !important;
+        align-items:center !important;
+        width:100% !important;
+        gap:20px !important;
+        background:#FBF8F5 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-powered {
+        justify-self:start !important;
+        margin:0 !important;
+        color:#8A7D78 !important;
+        font-size:11px !important;
+        font-weight:500 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-powered strong {
+        color:#8A7D78 !important;
+        font-weight:600 !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-footer-note {
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:6px !important;
+        color:#8A7D78 !important;
+        font-size:11px !important;
+        text-align:center !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-footer-note svg {
+        width:13px !important;
+        height:13px !important;
+        flex:0 0 13px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-footer-privacy {
+        justify-self:end !important;
+        color:#8A7D78 !important;
+        font-size:11px !important;
+        text-decoration:underline !important;
+        text-underline-offset:3px !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-footer-privacy:hover {
+        color:#560B14 !important;
+      }
+
+      @media (max-width:767px) {
+        #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+          grid-template-columns:1fr auto !important;
+          gap:8px !important;
+          padding:14px 20px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-footer-note {
+          grid-column:1 / -1 !important;
+          grid-row:2 !important;
+          justify-content:flex-start !important;
+          font-size:10px !important;
+          text-align:left !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-powered {
+          grid-column:1 !important;
+          grid-row:1 !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-footer-privacy {
+          grid-column:2 !important;
+          grid-row:1 !important;
+        }
+      }
     `
 
     document.head.appendChild(style)
@@ -1124,19 +1199,19 @@
       ' ' + svg('arrow', 17) +
       '</button>' +
       '<button id="kablet-decline" class="kablet-decline" type="button">No thanks, I\'ll do this later</button>' +
-      '<div class="kablet-privacy">' +
-      svg('lock', 13) +
-      '<span>Your details are only shared with relevant providers after you choose to continue.</span>' +
-      '</div>' +
       '</section>' +
 
       '<section class="kablet-visual">' + visual + '</section>' +
 
       '</div>' +
       '<footer class="kablet-modal-footer">' +
-      '<div class="kablet-trust">' + svg('shield', 14) + '<span>Connecting you with verified, relevant providers.</span></div>' +
-      '<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
-      '</footer>'
+'<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
+'<div class="kablet-footer-note">' +
+svg('lock', 13) +
+'<span>Details shared only after you continue.</span>' +
+'</div>' +
+'<a class="kablet-footer-privacy" href="https://kablet.com/privacy-policy" target="_blank" rel="noopener">Privacy</a>' +
+'</footer>'
 
     overlay.appendChild(modal)
     document.body.appendChild(overlay)
@@ -1228,7 +1303,7 @@
       '</div>' +
       '</div>' +
 
-      '<div class="kablet-privacy">' + svg('lock', 13) + '<span>Your details are only shared with providers relevant to this request.</span></div>' +
+      
 
       '<button id="kablet-confirm-return" class="kablet-return" type="button">Back to website ' + svg('arrow', 17) + '</button>' +
       '</section>' +
@@ -1247,9 +1322,13 @@
 
       '</div>' +
       '<footer class="kablet-modal-footer">' +
-      '<div class="kablet-trust">' + svg('shield', 14) + '<span>Connecting you with verified, relevant providers.</span></div>' +
-      '<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
-      '</footer>'
+'<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
+'<div class="kablet-footer-note">' +
+svg('lock', 13) +
+'<span>Details shared only after you continue.</span>' +
+'</div>' +
+'<a class="kablet-footer-privacy" href="https://kablet.com/privacy-policy" target="_blank" rel="noopener">Privacy</a>' +
+'</footer>'
 
     track('CONFIRMATION_DISPLAYED', opportunity)
 
