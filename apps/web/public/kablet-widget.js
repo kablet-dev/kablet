@@ -21,7 +21,37 @@
 
   var API_URL = 'https://kablet-backend.onrender.com'
   var processedForms = new WeakSet()
+  var sessionId =
+    sessionStorage.getItem('kablet_session_id') ||
+    (Date.now().toString(36) + Math.random().toString(36).slice(2))
 
+  sessionStorage.setItem('kablet_session_id', sessionId)
+
+  function trackWidgetEvent(eventType, opportunity, metadata) {
+    fetch(API_URL + '/intent/widget-events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-kablet-site-id': siteId,
+      },
+      body: JSON.stringify({
+        eventType: eventType,
+        intentEventId: opportunity
+          ? opportunity.intentEventId || null
+          : null,
+        opportunityInstanceId: opportunity
+          ? opportunity.instanceId || null
+          : null,
+        sessionId: sessionId,
+        pageUrl: window.location.href,
+        metadata: metadata || {},
+      }),
+    }).catch(function (error) {
+      console.warn('Kablet analytics event failed', error)
+    })
+  }
+
+  trackWidgetEvent('LOADED', null)
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -653,14 +683,21 @@
     document.head.appendChild(style)
     overlay.appendChild(modal)
     document.body.appendChild(overlay)
-
-    function close() {
+    trackWidgetEvent('DISPLAYED', opportunity)
+        function close() {
+      trackWidgetEvent('DISMISSED', opportunity)
       overlay.remove()
       style.remove()
     }
 
     modal.querySelector('#kablet-close').addEventListener('click', close)
-    modal.querySelector('#kablet-decline').addEventListener('click', close)
+        modal
+      .querySelector('#kablet-decline')
+      .addEventListener('click', function () {
+        trackWidgetEvent('DECLINED', opportunity)
+        overlay.remove()
+        style.remove()
+      })
 
     modal.querySelector('#kablet-accept').addEventListener('click', function () {
       var button = modal.querySelector('#kablet-accept')
@@ -720,7 +757,11 @@
         .catch(function (error) {
           console.warn('Kablet widget: consent failed', error)
 
-          button.disabled = false
+trackWidgetEvent('ERROR', opportunity, {
+  message: error.message,
+})
+
+button.disabled = false
           button.textContent = ctaText + ' →'
         })
     })
