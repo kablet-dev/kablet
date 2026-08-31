@@ -958,6 +958,59 @@
           padding:14px 20px !important;
         }
       }
+              @media (min-width:768px) {
+        #kablet-offer-overlay #kablet-offer-modal {
+          max-height:calc(100vh - 48px) !important;
+          overflow:hidden !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-state-grid {
+          min-height:470px !important;
+          height:470px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-copy {
+          justify-content:flex-start !important;
+          padding:42px 48px 26px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-copy h2 {
+          max-width:430px !important;
+          margin-bottom:14px !important;
+          font-size:44px !important;
+          line-height:1.02 !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-description {
+          margin-bottom:16px !important;
+          font-size:16px !important;
+          line-height:1.42 !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-benefit {
+          margin-bottom:16px !important;
+          padding:13px 15px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-accept {
+          min-height:54px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-privacy {
+          margin-top:12px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-visual {
+          min-height:470px !important;
+          padding:24px !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+          min-height:58px !important;
+          height:58px !important;
+          padding:15px 28px !important;
+        }
+      }
     `
 
     document.head.appendChild(style)
