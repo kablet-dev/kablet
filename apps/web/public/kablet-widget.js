@@ -1011,6 +1011,58 @@
           padding:15px 28px !important;
         }
       }
+              /* Definitive full-width footer layout */
+      #kablet-offer-overlay #kablet-offer-modal {
+        display:flex !important;
+        flex-direction:column !important;
+        height:auto !important;
+        min-height:0 !important;
+        overflow:hidden !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-state-grid {
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) minmax(360px,.92fr) !important;
+        flex:1 1 auto !important;
+        min-height:520px !important;
+        height:auto !important;
+      }
+
+      #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+        position:relative !important;
+        z-index:10 !important;
+        display:flex !important;
+        flex:0 0 58px !important;
+        width:100% !important;
+        height:58px !important;
+        min-height:58px !important;
+        margin:0 !important;
+        padding:18px 28px !important;
+        border-top:1px solid #E8DDD4 !important;
+        background:#FBF8F5 !important;
+      }
+
+      @media (max-width:767px) {
+        #kablet-offer-overlay #kablet-offer-modal {
+          height:auto !important;
+          max-height:calc(100dvh - 20px) !important;
+          overflow-y:auto !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-state-grid {
+          display:flex !important;
+          flex-direction:column !important;
+          flex:0 0 auto !important;
+          min-height:0 !important;
+        }
+
+        #kablet-offer-overlay #kablet-offer-modal .kablet-modal-footer {
+          flex:0 0 48px !important;
+          height:48px !important;
+          min-height:48px !important;
+          padding:14px 20px !important;
+        }
+      }
     `
 
     document.head.appendChild(style)
