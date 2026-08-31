@@ -162,462 +162,666 @@
     style.id = 'kablet-widget-styles'
 
     style.textContent = `
+      /* ── Reset & base ── */
+      #kablet-offer-overlay *,
+      #kablet-offer-overlay *::before,
+      #kablet-offer-overlay *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* ── Overlay ── */
       #kablet-offer-overlay {
-        position:fixed;
-        inset:0;
-        z-index:2147483647;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:24px;
-        background:rgba(23,20,20,.72);
-        backdrop-filter:blur(6px);
-        -webkit-backdrop-filter:blur(6px);
-        font-family:Inter,Arial,sans-serif;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+        background: rgba(23, 20, 20, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
 
+      @media (min-width: 768px) {
+        #kablet-offer-overlay {
+          align-items: center;
+          padding: 24px;
+        }
+      }
+
+      /* ── Modal shell ── */
       #kablet-offer-modal {
-        position:relative;
-        width:min(1080px,100%);
-        max-height:calc(100vh - 48px);
-        overflow:hidden;
-        border:1px solid rgba(86,11,20,.1);
-        border-radius:24px;
-        background:#FBF8F5;
-        color:#171414;
-        box-shadow:0 30px 90px rgba(23,20,20,.28);
+        position: relative;
+        width: 100%;
+        max-height: 96dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: 24px 24px 0 0;
+        background: #FBF8F5;
+        color: #171414;
+        outline: none;
       }
 
-      #kablet-offer-modal *,
-      #kablet-offer-modal *::before,
-      #kablet-offer-modal *::after {
-        box-sizing:border-box;
+      @media (min-width: 768px) {
+        #kablet-offer-modal {
+          width: min(960px, 100%);
+          max-height: calc(100vh - 48px);
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow:
+            0 0 0 1px rgba(86, 11, 20, 0.08),
+            0 24px 64px rgba(23, 20, 20, 0.22),
+            0 4px 12px rgba(23, 20, 20, 0.08);
+        }
       }
 
+      /* ── Drag handle (mobile only) ── */
+      .kablet-handle {
+        display: flex;
+        justify-content: center;
+        padding: 14px 0 4px;
+      }
+
+      .kablet-handle-bar {
+        width: 36px;
+        height: 4px;
+        border-radius: 99px;
+        background: #D4C8BF;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-handle {
+          display: none;
+        }
+      }
+
+      /* ── Close button ── */
       .kablet-close {
-        position:absolute;
-        top:16px;
-        right:16px;
-        z-index:4;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:44px;
-        height:44px;
-        padding:0;
-        border:0;
-        border-radius:999px;
-        background:transparent;
-        color:#171414;
-        cursor:pointer;
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid #E8DDD4;
+        border-radius: 50%;
+        background: #FBF8F5;
+        color: #6F6260;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
       }
 
       .kablet-close:hover {
-        background:rgba(86,11,20,.06);
+        background: #F0E9E1;
+        color: #171414;
+        border-color: #D4C8BF;
       }
 
+      .kablet-close:focus-visible {
+        outline: 2px solid #560B14;
+        outline-offset: 2px;
+      }
+
+      /* ── Two-column grid ── */
       .kablet-state-grid {
-        display:grid;
-        grid-template-columns:minmax(0,1fr) minmax(360px,.92fr);
+        display: flex;
+        flex-direction: column;
       }
 
+      @media (min-width: 768px) {
+        .kablet-state-grid {
+          display: grid;
+          grid-template-columns: 1fr 380px;
+          min-height: 520px;
+        }
+      }
+
+      /* ── Left: copy panel ── */
       .kablet-copy {
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        min-width:0;
-        padding:56px 48px 42px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 28px 24px 24px;
+        order: 2;
       }
 
+      @media (min-width: 768px) {
+        .kablet-copy {
+          padding: 52px 48px 44px;
+          order: unset;
+        }
+      }
+
+      /* ── Eyebrow badge ── */
       .kablet-badge {
-        display:inline-flex;
-        align-items:center;
-        gap:8px;
-        align-self:flex-start;
-        margin-bottom:25px;
-        padding:8px 13px;
-        border:1px solid #E8DDD4;
-        border-radius:999px;
-        background:#F7F2EA;
-        color:#6F6260;
-        font-size:13px;
-        font-weight:700;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        align-self: flex-start;
+        margin-bottom: 20px;
+        padding: 6px 12px 6px 8px;
+        border-radius: 99px;
+        background: rgba(86, 11, 20, 0.08);
+        color: #560B14;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
       }
 
-      .kablet-badge svg {
-        padding:4px;
-        border-radius:50%;
-        background:#560B14;
-        color:#F7F2EA;
+      .kablet-badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #560B14;
+        flex-shrink: 0;
       }
 
+      /* ── Headline ── */
       .kablet-copy h2 {
-        max-width:460px;
-        margin:0 0 18px;
-        color:#171414;
-        font-size:clamp(38px,4vw,52px);
-        line-height:1.03;
-        letter-spacing:-.045em;
+        margin-bottom: 14px;
+        color: #171414;
+        font-size: clamp(26px, 3.6vw, 42px);
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+        max-width: 440px;
       }
 
+      /* ── Description ── */
       .kablet-description {
-        max-width:450px;
-        margin:0 0 22px;
-        color:#6F6260;
-        font-size:17px;
-        line-height:1.55;
+        margin-bottom: 20px;
+        color: #6F6260;
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 420px;
       }
 
+      /* ── Benefit strip ── */
       .kablet-benefit {
-        display:flex;
-        gap:12px;
-        max-width:450px;
-        margin-bottom:20px;
-        padding:16px 18px;
-        border:1px solid #E8DDD4;
-        border-radius:14px;
-        background:rgba(247,242,234,.55);
-        color:#171414;
-        font-size:14px;
-        line-height:1.45;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 420px;
+        margin-bottom: 24px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        border-left: 3px solid #560B14;
+        background: rgba(86, 11, 20, 0.04);
+        color: #3D1A1E;
+        font-size: 13.5px;
+        line-height: 1.5;
       }
 
-      .kablet-benefit-icon,
-      .kablet-success-icon {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        flex:0 0 28px;
-        width:28px;
-        height:28px;
-        border-radius:50%;
-        background:#560B14;
-        color:#F7F2EA;
+      .kablet-benefit-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 22px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #560B14;
+        color: #FBF8F5;
+        margin-top: 1px;
       }
 
-      .kablet-accept,
-      .kablet-return {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:8px;
-        width:100%;
-        max-width:450px;
-        min-height:58px;
-        border-radius:12px;
-        cursor:pointer;
-        font:inherit;
-        font-size:16px;
-        font-weight:700;
-      }
-
+      /* ── CTA button ── */
       .kablet-accept {
-        border:0;
-        background:#560B14;
-        color:#F7F2EA;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        max-width: 420px;
+        min-height: 52px;
+        padding: 0 24px;
+        border: none;
+        border-radius: 10px;
+        background: #560B14;
+        color: #FBF8F5;
+        cursor: pointer;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+        transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+        box-shadow: 0 1px 2px rgba(86, 11, 20, 0.2), 0 4px 12px rgba(86, 11, 20, 0.15);
       }
 
       .kablet-accept:hover {
-        background:#741A22;
+        background: #6E1520;
+        box-shadow: 0 2px 4px rgba(86, 11, 20, 0.25), 0 8px 20px rgba(86, 11, 20, 0.2);
+        transform: translateY(-1px);
       }
 
-      .kablet-accept:active,
-      .kablet-return:active {
-        transform:translateY(1px);
+      .kablet-accept:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(86, 11, 20, 0.2);
       }
 
       .kablet-accept:disabled {
-        cursor:wait;
-        opacity:.7;
+        cursor: wait;
+        opacity: 0.65;
+        transform: none;
+        box-shadow: none;
       }
 
+      .kablet-accept:focus-visible {
+        outline: 2px solid #560B14;
+        outline-offset: 3px;
+      }
+
+      /* ── Decline link ── */
       .kablet-decline {
-        align-self:center;
-        margin:11px 0 0;
-        padding:7px;
-        border:0;
-        background:transparent;
-        color:#6F6260;
-        cursor:pointer;
-        font:inherit;
-        font-size:13px;
-        text-decoration:underline;
-        text-underline-offset:3px;
+        align-self: flex-start;
+        margin-top: 12px;
+        padding: 6px 0;
+        border: none;
+        background: transparent;
+        color: #9C8F8A;
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: transparent;
+        transition: color 0.15s, text-decoration-color 0.15s;
       }
 
+      .kablet-decline:hover {
+        color: #6F6260;
+        text-decoration-color: currentColor;
+      }
+
+      /* ── Privacy note ── */
       .kablet-privacy {
-        display:flex;
-        align-items:flex-start;
-        gap:7px;
-        max-width:450px;
-        margin-top:16px;
-        color:#6F6260;
-        font-size:12px;
-        line-height:1.45;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        max-width: 420px;
+        margin-top: 18px;
+        color: #9C8F8A;
+        font-size: 11.5px;
+        line-height: 1.5;
       }
 
       .kablet-privacy svg {
-        flex:0 0 15px;
-        margin-top:1px;
+        flex: 0 0 13px;
+        margin-top: 1px;
+        opacity: 0.7;
       }
 
+      /* ── Right: visual panel ── */
       .kablet-visual {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        min-height:580px;
-        padding:28px;
-        background:#F7F2EA;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        order: 1;
+        min-height: 200px;
+        padding: 20px 24px;
+        background: #F0E9E1;
       }
 
-      .kablet-image,
+      @media (min-width: 768px) {
+        .kablet-visual {
+          order: unset;
+          min-height: unset;
+          padding: 32px;
+          border-left: 1px solid #E8DDD4;
+        }
+      }
+
+      .kablet-image {
+        width: 100%;
+        height: 100%;
+        max-height: 180px;
+        border-radius: 12px;
+        object-fit: cover;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-image {
+          max-height: none;
+          border-radius: 14px;
+        }
+      }
+
       .kablet-placeholder {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:100%;
-        height:100%;
-        min-height:420px;
-        border-radius:22px;
-        object-fit:contain;
-        background:#EFE7DE;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        min-height: 160px;
+        border-radius: 12px;
+        background: #E8DDD4;
+        color: rgba(86, 11, 20, 0.25);
       }
 
-      .kablet-placeholder {
-        color:#560B14;
+      @media (min-width: 768px) {
+        .kablet-placeholder {
+          min-height: 360px;
+          border-radius: 14px;
+        }
       }
 
+      /* ── Footer ── */
       .kablet-modal-footer {
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:20px;
-        padding:18px 28px;
-        border-top:1px solid #E8DDD4;
-        color:#6F6260;
-        font-size:12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 24px;
+        border-top: 1px solid #E8DDD4;
+        color: #9C8F8A;
+        font-size: 11px;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-modal-footer {
+          padding: 14px 32px;
+        }
       }
 
       .kablet-trust {
-        display:flex;
-        align-items:center;
-        gap:8px;
+        display: none;
+        align-items: center;
+        gap: 6px;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-trust {
+          display: flex;
+        }
       }
 
       .kablet-trust svg {
-        color:#560B14;
+        color: #560B14;
+        opacity: 0.6;
+      }
+
+      .kablet-powered {
+        margin-left: auto;
       }
 
       .kablet-powered strong {
-        color:#560B14;
+        color: #560B14;
+        font-weight: 600;
       }
 
+      /* ─────────────────────────────────────────
+         CONFIRMATION STATE
+      ───────────────────────────────────────── */
+
+      /* Badge */
       .kablet-confirm-badge {
-        display:inline-flex;
-        align-items:center;
-        gap:10px;
-        align-self:flex-start;
-        margin-bottom:26px;
-        padding:7px 15px 7px 8px;
-        border:1px solid #CADCC6;
-        border-radius:999px;
-        background:#EDF4EC;
-        color:#347344;
-        font-size:14px;
-        font-weight:700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        align-self: flex-start;
+        margin-bottom: 20px;
+        padding: 6px 14px 6px 8px;
+        border-radius: 99px;
+        background: rgba(52, 115, 68, 0.1);
+        color: #2C6040;
+        font-size: 12px;
+        font-weight: 600;
       }
 
-      .kablet-confirm-badge .kablet-success-icon {
-        flex-basis:34px;
-        width:34px;
-        height:34px;
-        background:#347344;
+      .kablet-confirm-badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #347344;
+        flex-shrink: 0;
       }
 
+      /* Success icon (inline in badge – keep for reuse) */
+      .kablet-success-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 22px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #347344;
+        color: #fff;
+      }
+
+      /* "What happens next" timeline */
       .kablet-next {
-        max-width:450px;
-        margin:0 0 18px;
-        padding:8px 18px;
-        border:1px solid #E8DDD4;
-        border-radius:14px;
-        background:#F7F2EA;
+        max-width: 420px;
+        margin-bottom: 20px;
       }
 
       .kablet-next-title {
-        padding:8px 0 5px;
-        font-size:14px;
-        font-weight:700;
+        margin-bottom: 12px;
+        color: #6F6260;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
 
-      .kablet-next-row {
-        display:flex;
-        align-items:center;
-        gap:10px;
-        min-height:48px;
-        border-bottom:1px solid #E8DDD4;
-        color:#6F6260;
-        font-size:13px;
-        line-height:1.35;
+      .kablet-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: relative;
+        padding-left: 14px;
+        border-left: 2px solid #D6EAD6;
       }
 
-      .kablet-next-row:last-child {
-        border-bottom:0;
+      .kablet-timeline-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 0 0 18px 16px;
+        position: relative;
+        color: #3D1A1E;
+        font-size: 13.5px;
+        line-height: 1.45;
       }
 
-      .kablet-next-row svg {
-        flex:0 0 26px;
-        padding:5px;
-        border-radius:50%;
-        background:#347344;
-        color:#fff;
+      .kablet-timeline-row:last-child {
+        padding-bottom: 0;
       }
 
+      .kablet-timeline-dot {
+        position: absolute;
+        left: -21px;
+        top: 3px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #347344;
+        border: 2px solid #FBF8F5;
+        flex-shrink: 0;
+      }
+
+      /* Return button */
       .kablet-return {
-        border:1px solid #DCCFC7;
-        background:#FBF8F5;
-        color:#560B14;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        max-width: 420px;
+        min-height: 52px;
+        padding: 0 24px;
+        border: 1px solid #E8DDD4;
+        border-radius: 10px;
+        background: #FBF8F5;
+        color: #560B14;
+        cursor: pointer;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 600;
+        transition: background 0.15s, border-color 0.15s, transform 0.1s;
       }
 
       .kablet-return:hover {
-        background:#F7F2EA;
+        background: #F0E9E1;
+        border-color: #D4C8BF;
+        transform: translateY(-1px);
       }
 
+      .kablet-return:active {
+        transform: translateY(0);
+      }
+
+      .kablet-return:focus-visible {
+        outline: 2px solid #560B14;
+        outline-offset: 3px;
+      }
+
+      /* Confirmation visual panel */
       .kablet-confirm-visual {
-        background:#F7F2EA;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        order: 1;
+        min-height: 180px;
+        background: #EDF4EC;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-confirm-visual {
+          order: unset;
+          min-height: unset;
+          border-left: 1px solid rgba(52, 115, 68, 0.15);
+        }
       }
 
       .kablet-confirm-art {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:100%;
-        min-height:420px;
-        border-radius:22px;
-        background:#EFE7DE;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        min-height: 160px;
       }
 
-      .kablet-confirm-art-inner {
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:190px;
-        height:190px;
-        border-radius:50%;
-        background:#EDF4EC;
-        color:#347344;
-      }
-
-      @media (max-width:767px) {
-        #kablet-offer-overlay {
-          padding:10px;
-        }
-
-        #kablet-offer-modal {
-          width:100%;
-          max-height:calc(100dvh - 20px);
-          overflow-y:auto;
-          border-radius:20px;
-        }
-
-        .kablet-state-grid {
-          display:flex;
-          flex-direction:column;
-        }
-
-        .kablet-copy {
-          order:1;
-          padding:28px 20px 25px;
-        }
-
-        .kablet-copy h2 {
-          max-width:none;
-          font-size:33px;
-        }
-
-        .kablet-description {
-          font-size:15px;
-        }
-
-        .kablet-visual {
-          order:2;
-          min-height:190px;
-          padding:14px 20px;
-        }
-
-        .kablet-image,
-        .kablet-placeholder {
-          min-height:160px;
-          max-height:190px;
-          border-radius:15px;
-        }
-
-        .kablet-modal-footer {
-          order:3;
-          padding:14px 20px;
-          font-size:10px;
-        }
-
-        .kablet-trust {
-          display:none;
-        }
-
-        .kablet-modal-footer {
-          justify-content:flex-end;
-        }
-
-        .kablet-confirm-visual {
-          order:1;
-          min-height:170px;
-        }
-
-        .kablet-confirm-copy {
-          order:2;
-        }
-
+      @media (min-width: 768px) {
         .kablet-confirm-art {
-          min-height:140px;
-        }
-
-        .kablet-confirm-art-inner {
-          width:100px;
-          height:100px;
-        }
-
-        .kablet-confirm-copy h2 {
-          font-size:34px;
-        }
-
-        .kablet-confirm-badge {
-          align-self:center;
-        }
-
-        .kablet-confirm-copy {
-          text-align:center;
-        }
-
-        .kablet-next,
-        .kablet-privacy,
-        .kablet-return {
-          max-width:none;
-          text-align:left;
-        }
-
-        .kablet-modal-footer {
-          text-align:left;
+          min-height: 420px;
         }
       }
 
-      @media (max-height:650px) and (max-width:767px) {
+      /* Animated check ring */
+      .kablet-check-ring {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 88px;
+        height: 88px;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-check-ring {
+          width: 120px;
+          height: 120px;
+        }
+      }
+
+      .kablet-check-ring svg.kablet-ring-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+
+      .kablet-ring-track {
+        fill: none;
+        stroke: rgba(52, 115, 68, 0.15);
+        stroke-width: 3;
+      }
+
+      .kablet-ring-fill {
+        fill: none;
+        stroke: #347344;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-dasharray: 251;
+        stroke-dashoffset: 251;
+        animation: kablet-ring-draw 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+      }
+
+      .kablet-check-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #347344;
+        color: #fff;
+        animation: kablet-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.55s both;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-check-inner {
+          width: 86px;
+          height: 86px;
+        }
+      }
+
+      @keyframes kablet-ring-draw {
+        to { stroke-dashoffset: 0; }
+      }
+
+      @keyframes kablet-pop {
+        from { transform: scale(0.6); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
+      }
+
+      .kablet-confirm-copy {
+        order: 2;
+      }
+
+      @media (min-width: 768px) {
+        .kablet-confirm-copy {
+          order: unset;
+        }
+      }
+
+      /* ── Reduced motion ── */
+      @media (prefers-reduced-motion: reduce) {
+        .kablet-ring-fill {
+          animation: none;
+          stroke-dashoffset: 0;
+        }
+
+        .kablet-check-inner {
+          animation: none;
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .kablet-accept,
+        .kablet-return,
+        .kablet-close {
+          transition: none;
+        }
+      }
+
+      /* ── Hide visual on very short mobile screens ── */
+      @media (max-height: 600px) and (max-width: 767px) {
         .kablet-visual,
         .kablet-confirm-visual {
-          display:none;
-        }
-      }
-
-      @media (prefers-reduced-motion:reduce) {
-        *,*::before,*::after {
-          animation:none !important;
-          transition:none !important;
+          display: none;
         }
       }
     `
@@ -640,6 +844,7 @@
     modal.setAttribute('role', 'dialog')
     modal.setAttribute('aria-modal', 'true')
     modal.setAttribute('aria-labelledby', 'kablet-title')
+    modal.setAttribute('tabindex', '-1')
 
     var image =
       opportunity.imageUrl ||
@@ -649,54 +854,54 @@
 
     var visual = image
       ? '<img class="kablet-image" src="' + esc(image) + '" alt="">'
-      : '<div class="kablet-placeholder">' + svg('shield', 54) + '</div>'
+      : '<div class="kablet-placeholder">' + svg('shield', 48) + '</div>'
 
     modal.innerHTML =
-      '<button id="kablet-close" class="kablet-close" type="button" aria-label="Close Kablet recommendation">' +
-      svg('close', 22) +
+      '<div class="kablet-handle"><div class="kablet-handle-bar"></div></div>' +
+      '<button id="kablet-close" class="kablet-close" type="button" aria-label="Close">' +
+      svg('close', 16) +
       '</button>' +
       '<div class="kablet-state-grid">' +
+
       '<section class="kablet-copy">' +
-      '<div class="kablet-badge">' +
-      svg('spark', 16) +
-      '<span>Recommended next step</span></div>' +
+      '<div class="kablet-badge"><span class="kablet-badge-dot"></span><span>Recommended next step</span></div>' +
       '<h2 id="kablet-title">' +
       esc(opportunity.headline || opportunity.name || 'A relevant next step') +
       '</h2>' +
       '<p class="kablet-description">' +
       esc(opportunity.description || 'Explore a relevant option for your business.') +
       '</p>' +
-      '<div class="kablet-benefit"><span class="kablet-benefit-icon">' +
-      svg('check', 17) +
-      '</span><span>' +
+      '<div class="kablet-benefit">' +
+      '<span class="kablet-benefit-icon">' + svg('check', 13) + '</span>' +
+      '<span>' +
       esc(
         opportunity.benefit ||
-          opportunity.valueProposition ||
-          'Get connected with relevant providers and compare options.'
+        opportunity.valueProposition ||
+        'Get connected with relevant providers and compare options.'
       ) +
       '</span></div>' +
       '<button id="kablet-accept" class="kablet-accept" type="button">' +
       esc(opportunity.ctaLabel || 'Get options') +
-      ' ' +
-      svg('arrow', 19) +
+      ' ' + svg('arrow', 17) +
       '</button>' +
-      '<button id="kablet-decline" class="kablet-decline" type="button">No thanks, I’ll do this later</button>' +
+      '<button id="kablet-decline" class="kablet-decline" type="button">No thanks, I\'ll do this later</button>' +
       '<div class="kablet-privacy">' +
-      svg('lock', 15) +
-      '<span>Your details are only shared with relevant providers after you choose to continue.</span></div>' +
-      '</section>' +
-      '<section class="kablet-visual">' +
-      visual +
-      '</section>' +
+      svg('lock', 13) +
+      '<span>Your details are only shared with relevant providers after you choose to continue.</span>' +
       '</div>' +
-      '<footer class="kablet-modal-footer"><div class="kablet-trust">' +
-      svg('shield', 16) +
-      '<span>Connecting you with verified, relevant providers.</span></div><div class="kablet-powered">Powered by <strong>Kablet</strong></div></footer>'
+      '</section>' +
+
+      '<section class="kablet-visual">' + visual + '</section>' +
+
+      '</div>' +
+      '<footer class="kablet-modal-footer">' +
+      '<div class="kablet-trust">' + svg('shield', 14) + '<span>Connecting you with verified, relevant providers.</span></div>' +
+      '<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
+      '</footer>'
 
     overlay.appendChild(modal)
     document.body.appendChild(overlay)
-    document.body.dataset.kabletPreviousOverflow =
-      document.body.style.overflow || ''
+    document.body.dataset.kabletPreviousOverflow = document.body.style.overflow || ''
     document.body.style.overflow = 'hidden'
 
     track('DISPLAYED', opportunity)
@@ -705,9 +910,7 @@
       if (type) track(type, opportunity)
       overlay.remove()
       style.remove()
-      document.body.style.overflow =
-        document.body.dataset.kabletPreviousOverflow || ''
-
+      document.body.style.overflow = document.body.dataset.kabletPreviousOverflow || ''
       if (previousFocus && previousFocus.focus) previousFocus.focus()
     }
 
@@ -715,54 +918,46 @@
       close('DISMISSED')
     })
 
-    modal
-      .querySelector('#kablet-decline')
-      .addEventListener('click', function () {
-        close('DECLINED')
+    modal.querySelector('#kablet-decline').addEventListener('click', function () {
+      close('DECLINED')
+    })
+
+    modal.querySelector('#kablet-accept').addEventListener('click', function () {
+      var button = modal.querySelector('#kablet-accept')
+      button.disabled = true
+      button.setAttribute('aria-busy', 'true')
+      button.innerHTML = 'Connecting...'
+
+      fetch(API + '/intent/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-kablet-site-id': siteId,
+        },
+        body: JSON.stringify({
+          intentEventId: opportunity.intentEventId,
+          instanceId: opportunity.instanceId,
+          consentText: 'I agree to be contacted by relevant providers.',
+          consentVersion: 'v1',
+          sourceUrl: location.href,
+        }),
       })
-
-    modal
-      .querySelector('#kablet-accept')
-      .addEventListener('click', function () {
-        var button = modal.querySelector('#kablet-accept')
-
-        button.disabled = true
-        button.setAttribute('aria-busy', 'true')
-        button.innerHTML = 'Connecting...'
-
-        fetch(API + '/intent/consent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-kablet-site-id': siteId,
-          },
-          body: JSON.stringify({
-            intentEventId: opportunity.intentEventId,
-            instanceId: opportunity.instanceId,
-            consentText: 'I agree to be contacted by relevant providers.',
-            consentVersion: 'v1',
-            sourceUrl: location.href,
-          }),
+        .then(function (response) {
+          if (!response.ok) throw new Error('Consent failed: ' + response.status)
+          return response.json()
         })
-          .then(function (response) {
-            if (!response.ok) {
-              throw new Error('Consent failed: ' + response.status)
-            }
-
-            return response.json()
-          })
-          .then(function () {
-            track('ACCEPTED', opportunity)
-            renderConfirmation(modal, opportunity, close)
-          })
-          .catch(function (error) {
-            console.warn('Kablet consent failed', error)
-            track('ERROR', opportunity, { reason: 'CONSENT_FAILED' })
-            button.disabled = false
-            button.removeAttribute('aria-busy')
-            button.innerHTML = esc(opportunity.ctaLabel || 'Get options') + ' ' + svg('arrow', 19)
-          })
-      })
+        .then(function () {
+          track('ACCEPTED', opportunity)
+          renderConfirmation(modal, opportunity, close)
+        })
+        .catch(function (error) {
+          console.warn('Kablet consent failed', error)
+          track('ERROR', opportunity, { reason: 'CONSENT_FAILED' })
+          button.disabled = false
+          button.removeAttribute('aria-busy')
+          button.innerHTML = esc(opportunity.ctaLabel || 'Get options') + ' ' + svg('arrow', 17)
+        })
+    })
 
     modal.focus()
   }
@@ -770,64 +965,64 @@
   function renderConfirmation(modal, opportunity, close) {
     var category = opportunity.category || opportunity.offerCategory || ''
     var description = category
-      ? 'We’ve shared your request with relevant ' +
-        category +
-        ' providers. You can expect to hear from them shortly.'
-      : 'We’ve shared your request with relevant providers. You can expect to hear from them shortly.'
+      ? 'Your request has been shared with relevant ' + category + ' providers. Expect to hear from them shortly.'
+      : 'Your request has been shared with relevant providers. Expect to hear from them shortly.'
 
     modal.innerHTML =
-      '<button id="kablet-confirm-close" class="kablet-close" type="button" aria-label="Close Kablet confirmation">' +
-      svg('close', 22) +
+      '<div class="kablet-handle"><div class="kablet-handle-bar"></div></div>' +
+      '<button id="kablet-confirm-close" class="kablet-close" type="button" aria-label="Close">' +
+      svg('close', 16) +
       '</button>' +
       '<div class="kablet-state-grid">' +
+
       '<section class="kablet-copy kablet-confirm-copy">' +
-      '<div class="kablet-confirm-badge"><span class="kablet-success-icon">' +
-      svg('check', 21) +
-      '</span><span>Request received</span></div>' +
-      '<h2 id="kablet-title">You’re all set!</h2>' +
-      '<p class="kablet-confirm-message kablet-description">' +
-      esc(description) +
-      '</p>' +
-      '<div class="kablet-next"><div class="kablet-next-title">What happens next</div>' +
-      '<div class="kablet-next-row">' +
-      svg('check', 26) +
-      '<span>Your request has been received</span></div>' +
-      '<div class="kablet-next-row">' +
-      svg('check', 26) +
-      '<span>Relevant providers are being notified</span></div>' +
-      '<div class="kablet-next-row">' +
-      svg('check', 26) +
-      '<span>They’ll contact you directly with options and next steps</span></div></div>' +
-      '<div class="kablet-privacy">' +
-      svg('lock', 15) +
-      '<span>Your details are only shared with providers relevant to this request.</span></div>' +
-      '<button id="kablet-confirm-return" class="kablet-return" type="button">Close & return to website ' +
-      svg('arrow', 19) +
-      '</button>' +
-      '</section>' +
-      '<section class="kablet-visual kablet-confirm-visual"><div class="kablet-confirm-art"><div class="kablet-confirm-art-inner">' +
-      svg('check', 76) +
-      '</div></div></section>' +
+      '<div class="kablet-confirm-badge"><span class="kablet-confirm-badge-dot"></span><span>Request received</span></div>' +
+      '<h2 id="kablet-title">You\'re all set.</h2>' +
+      '<p class="kablet-description kablet-confirm-message">' + esc(description) + '</p>' +
+
+      '<div class="kablet-next">' +
+      '<div class="kablet-next-title">What happens next</div>' +
+      '<div class="kablet-timeline">' +
+      '<div class="kablet-timeline-row"><span class="kablet-timeline-dot"></span><span>Your request has been received</span></div>' +
+      '<div class="kablet-timeline-row"><span class="kablet-timeline-dot"></span><span>Relevant providers are being notified</span></div>' +
+      '<div class="kablet-timeline-row"><span class="kablet-timeline-dot"></span><span>They\'ll contact you directly with options and next steps</span></div>' +
       '</div>' +
-      '<footer class="kablet-modal-footer"><div class="kablet-trust">' +
-      svg('shield', 16) +
-      '<span>Connecting you with verified, relevant providers.</span></div><div class="kablet-powered">Powered by <strong>Kablet</strong></div></footer>'
+      '</div>' +
+
+      '<div class="kablet-privacy">' + svg('lock', 13) + '<span>Your details are only shared with providers relevant to this request.</span></div>' +
+
+      '<button id="kablet-confirm-return" class="kablet-return" type="button">Back to website ' + svg('arrow', 17) + '</button>' +
+      '</section>' +
+
+      '<section class="kablet-visual kablet-confirm-visual">' +
+      '<div class="kablet-confirm-art">' +
+      '<div class="kablet-check-ring">' +
+      '<svg class="kablet-ring-svg" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<circle class="kablet-ring-track" cx="50" cy="50" r="40"/>' +
+      '<circle class="kablet-ring-fill" cx="50" cy="50" r="40"/>' +
+      '</svg>' +
+      '<div class="kablet-check-inner">' + svg('check', 32) + '</div>' +
+      '</div>' +
+      '</div>' +
+      '</section>' +
+
+      '</div>' +
+      '<footer class="kablet-modal-footer">' +
+      '<div class="kablet-trust">' + svg('shield', 14) + '<span>Connecting you with verified, relevant providers.</span></div>' +
+      '<div class="kablet-powered">Powered by <strong>Kablet</strong></div>' +
+      '</footer>'
 
     track('CONFIRMATION_DISPLAYED', opportunity)
 
-    modal
-      .querySelector('#kablet-confirm-close')
-      .addEventListener('click', function () {
-        track('RETURNED_TO_HOST', opportunity)
-        close()
-      })
+    modal.querySelector('#kablet-confirm-close').addEventListener('click', function () {
+      track('RETURNED_TO_HOST', opportunity)
+      close()
+    })
 
-    modal
-      .querySelector('#kablet-confirm-return')
-      .addEventListener('click', function () {
-        track('RETURNED_TO_HOST', opportunity)
-        close()
-      })
+    modal.querySelector('#kablet-confirm-return').addEventListener('click', function () {
+      track('RETURNED_TO_HOST', opportunity)
+      close()
+    })
   }
 
   document.addEventListener('wpcf7mailsent', function (event) {
@@ -883,9 +1078,7 @@
 
   document.addEventListener('keydown', function (event) {
     var modal = document.getElementById('kablet-offer-modal')
-
     if (!modal) return
-
     if (event.key === 'Escape') {
       var closeButton = modal.querySelector('#kablet-close, #kablet-confirm-close')
       if (closeButton) closeButton.click()
