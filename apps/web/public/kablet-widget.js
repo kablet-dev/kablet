@@ -164,12 +164,10 @@
     style.textContent = `
       /* ── Reset & base ── */
       #kablet-offer-overlay *,
-      #kablet-offer-overlay *::before,
-      #kablet-offer-overlay *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+#kablet-offer-overlay *::before,
+#kablet-offer-overlay *::after {
+  box-sizing: border-box;
+}
 
       /* ── Overlay ── */
       #kablet-offer-overlay {
