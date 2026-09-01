@@ -239,14 +239,16 @@ export async function intentRoutes(fastify: FastifyInstance) {
     }
 
     const allowedEvents = [
-      'LOADED',
-      'IMPRESSION',
-      'DISPLAYED',
-      'DISMISSED',
-      'ACCEPTED',
-      'DECLINED',
-      'ERROR',
-    ]
+  'LOADED',
+  'IMPRESSION',
+  'DISPLAYED',
+  'DISMISSED',
+  'ACCEPTED',
+  'DECLINED',
+  'ERROR',
+  'CONFIRMATION_DISPLAYED',
+  'RETURNED_TO_HOST',
+]
 
     if (!body.eventType || !allowedEvents.includes(body.eventType)) {
       return reply.status(400).send({
