@@ -84,7 +84,105 @@ fastify.patch('/admin/merchants/:id/config', async (request, reply) => {
     })
   })
 
+  fastify.get('/admin/analytics', async (request, reply) => {
+    const query = request.query as {
+      siteId?: string
+      limit?: string
+    }
 
+    const limit = Math.min(Number(query.limit ?? 50), 100)
+
+    let siteQuery = db
+      .from('widget_events')
+      .select(
+        'id, host_site_id, intent_event_id, opportunity_instance_id, event_type, session_id, metadata, created_at, host_sites(name, domain, public_id)',
+      )
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (query.siteId) {
+      siteQuery = siteQuery.eq('host_site_id', query.siteId)
+    }
+
+    const { data: widgetEvents, error: widgetError } = await siteQuery
+
+    if (widgetError) {
+      return reply.status(500).send({
+        error: widgetError.message,
+      })
+    }
+
+    let intentQuery = db
+      .from('intent_events')
+      .select('id, host_site_id, event_type, category, page_url, created_at:received_at')
+
+    if (query.siteId) {
+      intentQuery = intentQuery.eq('host_site_id', query.siteId)
+    }
+
+    const { data: intentEvents, error: intentError } = await intentQuery
+
+    if (intentError) {
+      return reply.status(500).send({
+        error: intentError.message,
+      })
+    }
+
+    let decisionQuery = db
+      .from('decision_records')
+      .select('id, host_site_id, intent_event_id, outcome_type, decided_at')
+
+    if (query.siteId) {
+      decisionQuery = decisionQuery.eq('host_site_id', query.siteId)
+    }
+
+    const { data: decisions, error: decisionError } = await decisionQuery
+
+    if (decisionError) {
+      return reply.status(500).send({
+        error: decisionError.message,
+      })
+    }
+
+    const events = widgetEvents ?? []
+    const intents = intentEvents ?? []
+    const decisionRows = decisions ?? []
+
+    const count = (eventType: string) =>
+      events.filter((event) => event.event_type === eventType).length
+
+    const displayed = count('DISPLAYED')
+    const accepted = count('ACCEPTED')
+    const declined = count('DECLINED')
+    const dismissed = count('DISMISSED')
+    const errors = count('ERROR')
+
+    const noOffer = decisionRows.filter((decision) =>
+      ['NO_ELIGIBLE_OPPORTUNITIES', 'CATALOG_EMPTY'].includes(
+        decision.outcome_type,
+      ),
+    ).length
+
+    return reply.send({
+      metrics: {
+        form_submissions: intents.length,
+        offers_displayed: displayed,
+        offers_accepted: accepted,
+        offers_declined: declined,
+        offers_dismissed: dismissed,
+        no_offer_decisions: noOffer,
+        errors,
+        acceptance_rate: displayed
+          ? Math.round((accepted / displayed) * 1000) / 10
+          : 0,
+        consent_rate: displayed
+          ? Math.round((accepted / displayed) * 1000) / 10
+          : 0,
+      },
+      events,
+      decisions: decisionRows,
+    })
+  })
   // ── GET /admin/fulfillments ──────────────────────────────────────────
   fastify.get('/admin/fulfillments', async (request, reply) => {
     const { status = 'COMPLETED' } = request.query as { status?: string }
