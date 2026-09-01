@@ -27,6 +27,24 @@ export async function processIntentEvent(event: IntentInput) {
     .order('base_priority', { ascending: true })
 
  if (event.manual_offer_id === null) {
+  const { error: decisionError } = await db
+    .from('decision_records')
+    .insert({
+      transaction_event_id: null,
+      intent_event_id: event.id,
+      merchant_id: null,
+      host_site_id: event.host_site_id,
+      outcome_type: 'NO_ELIGIBLE_OPPORTUNITIES',
+      selected_definition_id: null,
+      candidates_evaluated: 0,
+      eligibility_trace: [],
+      selected_score: null,
+    })
+
+  if (decisionError) {
+    throw new Error(decisionError.message)
+  }
+
   return {
     outcome: 'NO_ELIGIBLE_OPPORTUNITIES',
     opportunity: null,
