@@ -26,9 +26,16 @@ export async function processIntentEvent(event: IntentInput) {
     .eq('lifecycle_state', 'ACTIVE')
     .order('base_priority', { ascending: true })
 
-  if (event.manual_offer_id) {
-    candidateQuery = candidateQuery.eq('id', event.manual_offer_id)
+ if (event.manual_offer_id === null) {
+  return {
+    outcome: 'NO_ELIGIBLE_OPPORTUNITIES',
+    opportunity: null,
   }
+}
+
+if (event.manual_offer_id) {
+  candidateQuery = candidateQuery.eq('id', event.manual_offer_id)
+}
 
   const { data: candidates, error: candidateError } = await candidateQuery
 
