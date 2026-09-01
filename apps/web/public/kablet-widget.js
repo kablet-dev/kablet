@@ -1140,6 +1140,38 @@
           grid-row:1 !important;
         }
       }
+        .kablet-email-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 22px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #d8d9cc;
+  border-radius: 8px;
+  background: #eef0e8;
+  color: #263c2b;
+}
+
+.kablet-email-confirmation svg {
+  flex: 0 0 auto;
+}
+
+.kablet-email-confirmation div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kablet-email-confirmation strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kablet-email-confirmation span {
+  font-size: 12px;
+  line-height: 1.35;
+}
     `
 
     document.head.appendChild(style)
@@ -1306,7 +1338,19 @@ svg('lock', 13) +
 
       
 
-      '<button id="kablet-confirm-return" class="kablet-return" type="button">Back to website ' + svg('arrow', 17) + '</button>' +
+      '<div class="kablet-email-confirmation">' +
+  svg('mail', 18) +
+  '<div>' +
+    '<strong>Confirmation sent</strong>' +
+    '<span>We sent a confirmation to ' +
+      esc(opportunity.customerEmail || 'your email address') +
+    '</span>' +
+  '</div>' +
+'</div>' +
+
+'<button id="kablet-confirm-return" class="kablet-return" type="button">Back to website ' +
+  svg('arrow', 17) +
+'</button>' +
       '</section>' +
 
       '<section class="kablet-visual kablet-confirm-visual">' +
