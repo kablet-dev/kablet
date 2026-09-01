@@ -111,12 +111,13 @@ export const adminApi = {
       headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
     }),
 
-  pauseDefinition: (id: string) =>
+    pauseDefinition: (id: string) =>
     fetch(`${API_URL}/admin/catalog/${id}/pause`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
     }),
-      siteCheck: (url: string) =>
+
+  siteCheck: (url: string) =>
     fetch(`${API_URL}/admin/site-check`, {
       method: 'POST',
       headers: {
@@ -127,9 +128,45 @@ export const adminApi = {
     }).then(async (response) => {
       if (!response.ok) {
         const error = await response.json().catch(() => null)
-        throw new Error(error?.error ?? `Site check failed: ${response.status}`)
+        throw new Error(
+          error?.error ?? `Site check failed: ${response.status}`,
+        )
       }
 
       return response.json()
     }),
+
+  getAnalytics: () =>
+    adminFetch<{
+      metrics: {
+        form_submissions: number
+        offers_displayed: number
+        offers_accepted: number
+        offers_declined: number
+        offers_dismissed: number
+        no_offer_decisions: number
+        errors: number
+        acceptance_rate: number
+        consent_rate: number
+      }
+      events: Array<{
+        id: string
+        event_type: string
+        created_at: string
+        intent_event_id: string | null
+        opportunity_instance_id: string | null
+        host_sites: {
+          name: string
+          domain: string
+          public_id: string
+        } | null
+      }>
+      decisions: Array<{
+        id: string
+        outcome_type: string
+        decided_at: string
+        intent_event_id: string | null
+        host_site_id: string | null
+      }>
+    }>('/admin/analytics'),
 }
