@@ -302,90 +302,125 @@ export async function intentRoutes(fastify: FastifyInstance) {
   })
 
   fastify.post('/intent/consent', async (request, reply) => {
-    const site = await resolveHostSite(request)
+  const site = await resolveHostSite(request)
 
-    if (!site) {
-      return reply.status(401).send({ error: 'Invalid or missing site identity' })
-    }
+  if (!site) {
+    return reply.status(401).send({
+      error: 'Invalid or missing site identity',
+    })
+  }
 
-    const body = request.body as {
-      intentEventId?: string
-      instanceId?: string
-      consentText?: string
-      consentVersion?: string
-      sourceUrl?: string
-    }
+  const body = request.body as {
+    intentEventId?: string
+    instanceId?: string
+    consentText?: string
+    consentVersion?: string
+    sourceUrl?: string
+  }
 
-    if (!body.intentEventId || !body.instanceId) {
-      return reply.status(400).send({
-        error: 'intentEventId and instanceId are required',
-      })
-    }
+  if (!body.intentEventId || !body.instanceId) {
+    return reply.status(400).send({
+      error: 'intentEventId and instanceId are required',
+    })
+  }
 
-    const { data: event } = await db
-      .from('intent_events')
-      .select('id, customer_id')
-      .eq('id', body.intentEventId)
-      .eq('host_site_id', site.id)
-      .single()
+  const { data: event } = await db
+    .from('intent_events')
+    .select('id, customer_id')
+    .eq('id', body.intentEventId)
+    .eq('host_site_id', site.id)
+    .single()
 
-    if (!event) {
-      return reply.status(404).send({ error: 'Intent event not found' })
-    }
+  if (!event) {
+    return reply.status(404).send({
+      error: 'Intent event not found',
+    })
+  }
 
-    const { data: instance } = await db
-      .from('opportunity_instances')
-      .select('id, current_state')
-      .eq('id', body.instanceId)
-      .eq('intent_event_id', body.intentEventId)
-      .eq('host_site_id', site.id)
-      .single()
+  const { data: instance } = await db
+    .from('opportunity_instances')
+    .select('id, current_state')
+    .eq('id', body.instanceId)
+    .eq('intent_event_id', body.intentEventId)
+    .eq('host_site_id', site.id)
+    .single()
 
-    if (!instance) {
-      return reply.status(404).send({ error: 'Opportunity not found' })
-    }
+  if (!instance) {
+    return reply.status(404).send({
+      error: 'Opportunity not found',
+    })
+  }
 
-    const { data: consent, error: consentError } = await db
-      .from('buyer_consents')
-      .insert({
-        customer_id: event.customer_id,
-        intent_event_id: event.id,
-        consent_type: 'CONNECT_WITH_PROVIDER',
-        consent_text:
-          body.consentText ??
-          'I agree to be contacted by relevant providers.',
-        consent_version: body.consentVersion ?? 'v1',
-        source_url: body.sourceUrl ?? null,
-      })
-      .select('id')
-      .single()
+  // Prevent duplicate consent if the user clicks twice
+  const { data: existingConsent } = await db
+    .from('buyer_consents')
+    .select('id')
+    .eq('intent_event_id', event.id)
+    .eq('consent_type', 'CONNECT_WITH_PROVIDER')
+    .maybeSingle()
 
-    if (consentError || !consent) {
-      return reply.status(500).send({
-        error: 'Could not save consent',
-      })
-    }
+  if (existingConsent) {
+    return reply.send({
+      ok: true,
+      status: 'ACCEPTED',
+      consentId: existingConsent.id,
+      alreadyRecorded: true,
+    })
+  }
 
-    await db
-      .from('opportunity_instances')
-      .update({
-        current_state: 'ACCEPTED',
-        customer_response: 'ACCEPTED',
-        response_at: new Date().toISOString(),
-      })
-      .eq('id', instance.id)
+  const { data: consent, error: consentError } = await db
+    .from('buyer_consents')
+    .insert({
+      customer_id: event.customer_id,
+      intent_event_id: event.id,
+      consent_type: 'CONNECT_WITH_PROVIDER',
+      consent_text:
+        body.consentText ??
+        'I agree to be contacted by relevant providers.',
+      consent_version: body.consentVersion ?? 'v1',
+      source_url: body.sourceUrl ?? null,
+    })
+    .select('id')
+    .single()
 
+  if (consentError || !consent) {
+    return reply.status(500).send({
+      error: 'Could not save consent',
+    })
+  }
+
+  await db
+    .from('opportunity_instances')
+    .update({
+      current_state: 'ACCEPTED',
+      customer_response: 'ACCEPTED',
+      response_at: new Date().toISOString(),
+    })
+    .eq('id', instance.id)
+
+  // Only create one ACCEPTED widget event
+  const { data: existingAcceptedEvent } = await db
+    .from('widget_events')
+    .select('id')
+    .eq('intent_event_id', event.id)
+    .eq('opportunity_instance_id', instance.id)
+    .eq('event_type', 'ACCEPTED')
+    .maybeSingle()
+
+  if (!existingAcceptedEvent) {
     await db.from('widget_events').insert({
       host_site_id: site.id,
       intent_event_id: event.id,
       opportunity_instance_id: instance.id,
       event_type: 'ACCEPTED',
     })
+  }
 
-    return reply.send({
-      ok: true,
-      status: 'ACCEPTED',
-      consentId: consent.id,
-    })
+  return reply.send({
+    ok: true,
+    status: 'ACCEPTED',
+    consentId: consent.id,
+    alreadyRecorded: false,
   })
+})
 }
