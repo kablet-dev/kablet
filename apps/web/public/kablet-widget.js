@@ -138,12 +138,9 @@
       })
       .then(function (result) {
         if (!result.opportunity) {
-          track('ERROR', null, {
-            reason: 'NO_OFFER_RETURNED',
-            intentEventId: result.intentEventId || null,
-          })
-          return
-        }
+  console.info('Kablet: no offer available for this request')
+  return
+}
 
         result.opportunity.intentEventId = result.intentEventId
         result.opportunity.customerEmail =
@@ -1266,7 +1263,6 @@ svg('lock', 13) +
           return response.json()
         })
         .then(function () {
-          track('ACCEPTED', opportunity)
           renderConfirmation(modal, opportunity, close)
         })
         .catch(function (error) {
