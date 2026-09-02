@@ -590,4 +590,58 @@ fastify.patch('/admin/payouts/:id/mark-paid', async (request, reply) => {
       })
     }
   })
+  // ── GET /admin/requests ─────────────────────────────────────────────
+fastify.get('/admin/requests', async (request, reply) => {
+  const { data: requests, error } = await db
+    .from('intent_events')
+    .select('*')
+    .order('received_at', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    return reply.status(500).send({
+      error: error.message,
+    })
+  }
+
+  const intentIds = (requests ?? []).map((item) => item.id)
+
+  const { data: customers } = intentIds.length
+    ? await db
+        .from('customer_profiles')
+        .select('*')
+        .in('id', (requests ?? [])
+          .map((item) => item.customer_id)
+          .filter(Boolean))
+    : { data: [] }
+
+  const { data: opportunities } = intentIds.length
+    ? await db
+        .from('opportunity_instances')
+        .select('*')
+        .in('intent_event_id', intentIds)
+    : { data: [] }
+
+  const { data: consents } = intentIds.length
+    ? await db
+        .from('buyer_consents')
+        .select('*')
+        .in('intent_event_id', intentIds)
+    : { data: [] }
+
+  const { data: decisions } = intentIds.length
+    ? await db
+        .from('decision_records')
+        .select('*')
+        .in('intent_event_id', intentIds)
+    : { data: [] }
+
+  return reply.send({
+    requests: requests ?? [],
+    customers: customers ?? [],
+    opportunities: opportunities ?? [],
+    consents: consents ?? [],
+    decisions: decisions ?? [],
+  })
+})
 }
