@@ -1380,7 +1380,7 @@ var confirmationImage =
 
       '<section class="kablet-copy kablet-confirm-copy">' +
       '<div class="kablet-confirm-badge"><span class="kablet-confirm-badge-dot"></span><span>Request received</span></div>' +
-      '<h2 id="kablet-title">You\'re all set.</h2>' +
+      '<h2 id="kablet-title">You\'re all set</h2>' +
       '<p class="kablet-description kablet-confirm-message">' + esc(description) + '</p>' +
 
       '<div class="kablet-next">' +
