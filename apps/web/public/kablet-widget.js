@@ -1177,6 +1177,39 @@
   font-weight: 700;
 }
 
+.kablet-confirm-visual {
+  position: relative;
+  overflow: hidden;
+  background: #eef4ed;
+}
+
+.kablet-confirm-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.28;
+  filter: saturate(0.7);
+}
+
+.kablet-confirm-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kablet-confirm-check .kablet-check-ring {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: #347b47;
+  box-shadow: 0 0 0 5px rgba(52, 123, 71, 0.18);
+}
+
+.kablet-confirm-check .kablet-check-inner {
+  color: #fff;
+}
 .kablet-email-confirmation span {
   font-size: 12px;
   line-height: 1.35;
@@ -1333,7 +1366,11 @@ svg('lock', 13) +
     var description = category
       ? 'Your request has been shared with relevant ' + category + ' providers. Expect to hear from them shortly.'
       : 'Your request has been shared with relevant providers. Expect to hear from them shortly.'
-
+var confirmationImage =
+  opportunity.imageUrl ||
+  opportunity.visualAssetUrl ||
+  opportunity.visual_asset_url ||
+  ''
     modal.innerHTML =
       '<div class="kablet-handle"><div class="kablet-handle-bar"></div></div>' +
       '<button id="kablet-confirm-close" class="kablet-close" type="button" aria-label="Close">' +
@@ -1367,22 +1404,29 @@ svg('lock', 13) +
   '</div>' +
 '</div>' +
 
-'<button id="kablet-confirm-return" class="kablet-return" type="button">Back to website ' +
+'<button id="kablet-confirm-return" class="kablet-return" type="button">Close & return to website ' +
   svg('arrow', 17) +
 '</button>' +
       '</section>' +
 
-      '<section class="kablet-visual kablet-confirm-visual">' +
-      '<div class="kablet-confirm-art">' +
-      '<div class="kablet-check-ring">' +
-      '<svg class="kablet-ring-svg" viewBox="0 0 100 100" aria-hidden="true">' +
-      '<circle class="kablet-ring-track" cx="50" cy="50" r="40"/>' +
-      '<circle class="kablet-ring-fill" cx="50" cy="50" r="40"/>' +
-      '</svg>' +
-      '<div class="kablet-check-inner">' + svg('check', 32) + '</div>' +
-      '</div>' +
-      '</div>' +
-      '</section>' +
+      '\<section class="kablet-visual kablet-confirm-visual">' +
+  (confirmationImage
+    ? '\<img class="kablet-confirm-image" src="' +
+      esc(confirmationImage) +
+      '" alt="" />'
+    : '') +
+  '\<div class="kablet-confirm-check">' +
+    '\<div class="kablet-check-ring">' +
+      '\<svg class="kablet-ring-svg" viewBox="0 0 100 100" aria-hidden="true">' +
+        '\<circle class="kablet-ring-track" cx="50" cy="50" r="40"/>' +
+        '\<circle class="kablet-ring-fill" cx="50" cy="50" r="40"/>' +
+      '\</svg>' +
+      '\<div class="kablet-check-inner">' +
+        svg('check', 32) +
+      '\</div>' +
+    '\</div>' +
+  '\</div>' +
+'\</section>' +
 
       '</div>' +
       '<footer class="kablet-modal-footer">' +
