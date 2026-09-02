@@ -1394,15 +1394,6 @@ var confirmationImage =
 
       
 
-      '<div class="kablet-email-confirmation">' +
-  svg('mail', 18) +
-  '<div>' +
-    '<strong>Confirmation sent</strong>' +
-    '<span>We sent a confirmation to ' +
-      esc(opportunity.customerEmail || 'your email address') +
-    '</span>' +
-  '</div>' +
-'</div>' +
 
 '<button id="kablet-confirm-return" class="kablet-return" type="button">Close & return to website ' +
   svg('arrow', 17) +
