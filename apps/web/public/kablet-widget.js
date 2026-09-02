@@ -340,34 +340,6 @@
         max-width: 420px;
       }
 
-      /* ── Benefit strip ── */
-      .kablet-benefit {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        max-width: 420px;
-        margin-bottom: 24px;
-        padding: 14px 16px;
-        border-radius: 10px;
-        border-left: 3px solid #560B14;
-        background: rgba(86, 11, 20, 0.04);
-        color: #3D1A1E;
-        font-size: 13.5px;
-        line-height: 1.5;
-      }
-
-      .kablet-benefit-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 22px;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #560B14;
-        color: #FBF8F5;
-        margin-top: 1px;
-      }
 
       /* ── CTA button ── */
       .kablet-accept {
@@ -1275,15 +1247,6 @@
 (benefitPills
   ? '\<div class="kablet-benefit-pills">' + benefitPills + '\</div>'
   : '') +
-'\<div class="kablet-benefit">' +
-      '<span class="kablet-benefit-icon">' + svg('check', 13) + '</span>' +
-      '<span>' +
-      esc(
-        opportunity.benefit ||
-        opportunity.valueProposition ||
-        'Get connected with relevant providers and compare options.'
-      ) +
-      '</span></div>' +
       '<button id="kablet-accept" class="kablet-accept" type="button">' +
       esc(opportunity.ctaLabel || 'Get options') +
       ' ' + svg('arrow', 17) +
