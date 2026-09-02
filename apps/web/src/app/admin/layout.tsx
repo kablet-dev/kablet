@@ -16,6 +16,12 @@ export default function AdminLayout({
             <Link href="/admin" className="text-sm text-gray-400 hover:text-white">
   Overview
 </Link>
+<Link href="/admin/analytics" className="text-sm text-gray-400 hover:text-white">
+  Analytics
+</Link>
+<Link href="/admin/requests" className="text-sm text-gray-400 hover:text-white">
+  Requests
+</Link>
 <Link href="/admin/fulfillments" className="text-sm text-gray-400 hover:text-white">
   Fulfillments
 </Link>
