@@ -169,4 +169,12 @@ export const adminApi = {
         host_site_id: string | null
       }>
     }>('/admin/analytics'),
+      getRequests: () =>
+    adminFetch<{
+      requests: any[]
+      customers: any[]
+      opportunities: any[]
+      consents: any[]
+      decisions: any[]
+    }>('/admin/requests'),
 }
