@@ -1140,6 +1140,43 @@
           grid-row:1 !important;
         }
       }
+
+      .kablet-benefit-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 18px;
+}
+
+.kablet-benefit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid #e6ddd7;
+  border-radius: 999px;
+  background: #fbf8f5;
+  color: #4d292d;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.kablet-benefit-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #6b0715;
+  color: #fff;
+}
+
+.kablet-benefit-pill-icon svg {
+  width: 11px;
+  height: 11px;
+}
         .kablet-email-confirmation {
   display: flex;
   align-items: center;
@@ -1204,6 +1241,22 @@
       ? '<img class="kablet-image" src="' + esc(image) + '" alt="">'
       : '<div class="kablet-placeholder">' + svg('shield', 48) + '</div>'
 
+      var benefitPills = Array.isArray(opportunity.valueBullets)
+  ? opportunity.valueBullets
+      .filter(Boolean)
+      .slice(0, 3)
+      .map(function (pill) {
+        return (
+          '<span class="kablet-benefit-pill">' +
+          '<span class="kablet-benefit-pill-icon">' +
+          svg('check', 11) +
+          '</span>' +
+          esc(pill) +
+          '</span>'
+        )
+      })
+      .join('')
+  : ''
     modal.innerHTML =
       '<div class="kablet-handle"><div class="kablet-handle-bar"></div></div>' +
       '<button id="kablet-close" class="kablet-close" type="button" aria-label="Close">' +
@@ -1218,8 +1271,11 @@
       '</h2>' +
       '<p class="kablet-description">' +
       esc(opportunity.description || 'Explore a relevant option for your business.') +
-      '</p>' +
-      '<div class="kablet-benefit">' +
+      '\</p>' +
+(benefitPills
+  ? '\<div class="kablet-benefit-pills">' + benefitPills + '\</div>'
+  : '') +
+'\<div class="kablet-benefit">' +
       '<span class="kablet-benefit-icon">' + svg('check', 13) + '</span>' +
       '<span>' +
       esc(
